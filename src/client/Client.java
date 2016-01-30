@@ -365,7 +365,7 @@ public class Client {
 		
 		// Send a READ request
 		System.out.println("\n~~~~SENDING A READ REQUEST for file testFileFromServer.txt ~~~~\n");
-		//newClient.sendAndReceive(PacketType.READ, "netascii", "testFileFromServer.txt");
+		newClient.sendAndReceive(PacketType.READ, "netascii", "testFileFromServer.txt");
 
 		// Send a WRITE request
 		System.out.println("\n~~~~SENDING A WRITE REQUEST for file testFileFromClient.txt ~~~~\n");

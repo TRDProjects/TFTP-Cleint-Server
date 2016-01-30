@@ -100,7 +100,7 @@ public class ErrorSimulatorRequest implements Runnable {
 	    
 		// Construct a datagram packet to send to the Server
 		// This assumes that the Server is running on localhost
-	    sendPacketServer = new DatagramPacket(requestPacket.getData(), requestPacket.getLength(),
+	    sendPacketServer = new DatagramPacket(receivePacketClient.getData(), receivePacketClient.getLength(),
 	    			receivePacketServer.getAddress(), receivePacketServer.getPort());
 	    
 	    // Process the packet to send
