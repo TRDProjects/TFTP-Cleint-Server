@@ -13,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import server.Server;
+import util.Keyboard;
 
 public class Client {
 	
@@ -361,15 +362,15 @@ public class Client {
 	
 	public static void main(String args[]) {
 		
-		Client newClient = new Client(Mode.TEST);
+		Client newClient = new Client(Mode.NORMAL);
 		
 		// Send a READ request
 		System.out.println("\n~~~~SENDING A READ REQUEST for file testFileFromServer.txt ~~~~\n");
 		newClient.sendAndReceive(PacketType.READ, "netascii", "testFileFromServer.txt");
 
 		// Send a WRITE request
-		System.out.println("\n~~~~SENDING A WRITE REQUEST for file testFileFromClient.txt ~~~~\n");
-		newClient.sendAndReceive(PacketType.WRITE, "netascii", "testFileFromClient.txt");
+		//System.out.println("\n~~~~SENDING A WRITE REQUEST for file testFileFromClient.txt ~~~~\n");
+		//newClient.sendAndReceive(PacketType.WRITE, "netascii", "testFileFromClient.txt");
 		
 		if (newClient.sendReceiveSocket != null) {
 			newClient.sendReceiveSocket.close();

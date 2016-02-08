@@ -241,8 +241,17 @@ public class Request implements Runnable {
     		return;
     	} catch (IOException e) {
 	        e.printStackTrace();
+	        Thread.currentThread().interrupt();
 	        System.exit(1);
     	}
+    	
+    	System.out.println("Server (" + Thread.currentThread() + "): Finished reading file");
+    	
+	    sendReceiveSocket.close();
+	    
+		// Close thread
+		Thread.currentThread().interrupt();
+		return;
 		
 	}
 	
@@ -275,6 +284,7 @@ public class Request implements Runnable {
 			    	sendReceiveSocket.send(sendPacket);
 			    } catch (IOException e) {
 			       e.printStackTrace();
+			       Thread.currentThread().interrupt();
 			       System.exit(1);
 			    }
 				
@@ -317,6 +327,7 @@ public class Request implements Runnable {
 	    	
     	} catch (IOException e) {
 	        e.printStackTrace();
+	        Thread.currentThread().interrupt();
 	        System.exit(1);
     	}
 
@@ -336,6 +347,10 @@ public class Request implements Runnable {
 
 	@Override
 	public void run() {
+		
+		if (Thread.currentThread().isInterrupted()) {
+			return;
+		}
 
 	    // Process the received datagram.
 	    printPacketInfo(requestPacket, PacketAction.RECEIVE);

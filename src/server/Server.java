@@ -7,7 +7,9 @@ import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.util.Arrays;
 
-public class Server {
+import util.Keyboard;
+
+public class Server implements Runnable {
 	
 	public static enum PacketType {
 		READ((byte) 1), 
@@ -31,9 +33,11 @@ public class Server {
 		SEND, RECEIVE
 	}
 	
+	volatile boolean running = true;
 	
-	DatagramPacket receivePacket;
-	DatagramSocket receiveSocket;
+	
+	private DatagramPacket receivePacket;
+	private DatagramSocket receiveSocket;
 	
 	public Server() {
 		try {
@@ -68,11 +72,17 @@ public class Server {
 	    try {        
 	        System.out.println("Waiting...");
 	        receiveSocket.receive(receivePacket);
+	    } catch (SocketException e) {
+	    	if (e.getMessage().matches("Socket closed")) {
+	    		System.out.println("\n>> Shutting down Server...\n");
+	    		return;
+	    	}
 	    } catch (IOException e) {
 	        System.out.print("IO Exception: likely:");
 	        System.out.println("Receive Socket Timed Out.\n" + e);
 	        e.printStackTrace();
 	        System.exit(1);
+	        
 	    }
 	    
 	    
@@ -82,14 +92,39 @@ public class Server {
 	    requestThread.start();
 		
 	}
+
+    
+	@Override
+	public void run() {
+		while(true) {
+			if (Thread.currentThread().isInterrupted()) {
+				return;
+			}
+			receiveAndProcessRequest();
+		}
+	}
+	
 	
 	
     public static void main(String args[]) {
     	Server newServer = new Server();
     	
+        Thread serverThread = new Thread(newServer, "Server Main Thread");
+        
+        serverThread.start();
+        
+        System.out.println(">> Server is running...To exit, enter 'q'...\n");
+    	
     	while (true) {
-        	newServer.receiveAndProcessRequest();
+        	if (Keyboard.getCharacter() == 'q') {
+        		break;
+        	}
     	}
+    	
+    	newServer.running = false;
+    	newServer.receiveSocket.close();
+    	serverThread.interrupt();
+    	
     	
     }
 
