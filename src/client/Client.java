@@ -364,13 +364,66 @@ public class Client {
 		
 		Client newClient = new Client(Mode.NORMAL);
 		
-		// Send a READ request
-		System.out.println("\n~~~~SENDING A READ REQUEST for file testFileFromServer.txt ~~~~\n");
-		newClient.sendAndReceive(PacketType.READ, "netascii", "testFileFromServer.txt");
-
-		// Send a WRITE request
-		//System.out.println("\n~~~~SENDING A WRITE REQUEST for file testFileFromClient.txt ~~~~\n");
-		//newClient.sendAndReceive(PacketType.WRITE, "netascii", "testFileFromClient.txt");
+		
+		while(true) {
+			System.out.println("------------------------------------------------------");
+			System.out.println("Select from the following options by entering a number (i.e. 1) or enter 'q' to exit:\n");
+			System.out.println("1. Read file");
+			System.out.println("2. Write file");
+			
+			char input = Keyboard.getCharacter();
+			
+			if (input == 'q') {
+				System.out.print("Exiting...");
+				break;
+				
+			} else if (input == '1') { // READ request
+				String fileName = "";
+				String mode = "";
+				
+				System.out.print("Enter the name of the file (if left blank then testFileFromServer.txt will be used): ");
+				fileName = Keyboard.getString();
+				if (fileName.trim().isEmpty()) {
+					fileName = "testFileFromServer.txt";
+				}
+				
+				System.out.println("Enter the mode (if left blank then netascii will be used): ");
+				mode = Keyboard.getString();
+				
+				if (mode.trim().isEmpty()) {
+					mode = "netascii";
+				}
+				System.out.println("\nSending READ request...");
+				
+				newClient.sendAndReceive(PacketType.READ, mode, fileName);
+				
+				System.out.println("------------------------------------------------------");
+				
+				
+			} else if (input == '2') { // WRITE request
+				String fileName = "";
+				String mode = "";
+				
+				System.out.print("Enter the name of the file (if left blank then testFileFromClient.txt will be used): ");
+				fileName = Keyboard.getString();
+				if (fileName.trim().isEmpty()) {
+					fileName = "testFileFromClient.txt";
+				}
+				
+				System.out.println("Enter the mode (if left blank then netascii will be used): ");
+				mode = Keyboard.getString();
+				
+				if (mode.trim().isEmpty()) {
+					mode = "netascii";
+				}
+				System.out.println("\nSending WRITE request...");
+				
+				newClient.sendAndReceive(PacketType.WRITE, mode, fileName);
+				
+			} else {
+				System.out.println("Invalid option");
+			}
+		}
 		
 		if (newClient.sendReceiveSocket != null) {
 			newClient.sendReceiveSocket.close();
