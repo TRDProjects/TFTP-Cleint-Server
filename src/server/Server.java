@@ -33,6 +33,28 @@ public class Server implements Runnable {
 		SEND, RECEIVE
 	}
 	
+	
+	public enum ErrorType {
+		ILLEGAL_TFTP_OPERATION((byte) 4),
+		UNKNOWN_TRANSFER_ID((byte) 5);
+		
+		private byte errorCode;
+		
+		private ErrorType(byte errorCode) {
+			this.errorCode = errorCode;
+		}
+		
+		public byte getErrorCode() {
+			return errorCode;
+		}
+	}
+	
+	
+	public enum Mode {
+		NETASCII,
+		OCTET;
+	}
+	
 	volatile boolean running = true;
 	
 	

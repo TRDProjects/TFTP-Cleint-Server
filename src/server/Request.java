@@ -51,30 +51,64 @@ public class Request implements Runnable {
 	}
 	
 	
-	private PacketType getDataRequestType(byte data[]) {
+	private PacketType getDataRequestType(byte data[]) throws InvalidRequestException {
 		
 		if (data.length < 2) {
 			// First two bytes that indicate a read/write request do not exist
-			return PacketType.ERROR;
+			throw new InvalidRequestException("Read or write request opcode (01 or 02) does not exist");
 		} else {
 			// Check if the first and two bytes are either 0 1 or 0 2 for read or write request respectively
 			if (data[0] == 0 && ((data[1] == 1) || (data[1] == 2))) {
+				byte[] nameOfFile = new byte[512];
+				byte[] mode = new byte[512];
 				int numOfZeroBytes = 0;
+				boolean middleZeroByteExists = false;
 			    boolean lastZeroByteExists = false;
+				boolean modeStringStarted = false;
 			    
-			    // Check for the number of 0 bytes in the data array.
-			    // There should be two zero bytes in total with the last byte being one of them
 				for (int i = 2; i < data.length; i++) {
-					if ((data[i] == 0)) {
+
+				    if (modeStringStarted) {
+				    	mode[i - 2] = data[i];
+				    } else {
+				    	nameOfFile[i - 2] = data[i];
+				    }
+					
+					if (data[i] == 0) {
+						modeStringStarted = true;
 						numOfZeroBytes++;
 						
 						if (i == data.length - 1) {
 							lastZeroByteExists = true;
+						} else {
+							middleZeroByteExists = true;
 						}
 					}
 				}
 				
-				if (numOfZeroBytes == 2 && lastZeroByteExists) {
+				String nameOfFileString = new String(nameOfFile, 0, nameOfFile.length).trim();
+				String modeString = new String(mode, 0, mode.length).trim();
+				
+				if (nameOfFileString.length() == 0) {
+					throw new InvalidRequestException("File name is empty");
+					
+				} else if (modeString.length() == 0) {
+					throw new InvalidRequestException("Mode is empty");
+
+				} else if (!modeString.toLowerCase().equals(Server.Mode.NETASCII.name().toLowerCase()) && 
+						!modeString.toLowerCase().equals(Server.Mode.OCTET.name().toLowerCase())) {
+					throw new InvalidRequestException("Invalid mode. Received " + modeString + ". Must be netascii or octet.");
+					
+				} else if (!middleZeroByteExists) {
+					throw new InvalidRequestException("0 byte between filename and mode was not found");
+					
+				} else if (!lastZeroByteExists) {
+					throw new InvalidRequestException("Last byte is not a 0 byte");
+					
+				} else if (numOfZeroBytes != 2) {
+					throw new InvalidRequestException("More than two 0 bytes received");
+					
+				} else {
 					// The data is valid
 					if (data[1] == PacketType.READ.getOpcode()) {
 						return PacketType.READ;
@@ -82,13 +116,14 @@ public class Request implements Runnable {
 						return PacketType.WRITE;
 					}
 				}
+			    
 			} else {
 				// Invalid read/write request (i.e. first two bytes are not 0 1 or 0 2)
-				return PacketType.ERROR;
+				throw new InvalidRequestException("Invalid opcode. Must be 01 for a read request or 02 for a write request");
 			}
 		}
 		
-		return PacketType.ERROR;
+		throw new InvalidRequestException("Invalid request");
 	}
 	
 	
@@ -356,29 +391,34 @@ public class Request implements Runnable {
 	    printPacketInfo(requestPacket, PacketAction.RECEIVE);
 	    
 		
-		// Get the request type (i.e READ, WRITE, or ERROR)
-		PacketType reqType = getDataRequestType((new String(requestPacket.getData(), 0, requestPacket.getLength())).getBytes());
-		
-		if (reqType.equals(PacketType.ERROR)) {
-			// Close thread
-			Thread.currentThread().interrupt();
-			return;
-			
-		} else if (reqType.equals(PacketType.READ) || reqType.equals(PacketType.WRITE)) {
-			
-			
-			if (reqType.equals(PacketType.READ)) {
-				processReadRequest();
-			} else {
-				try {
-					processWriteRequest();
-				} catch (InvalidDataException e) {
-					// TODO
-					System.out.println("Invalid data received");
+		// Get the request type (i.e READ, WRITE, or INVALID)
+	    try {
+	    	PacketType reqType = getDataRequestType((new String(requestPacket.getData(), 0, requestPacket.getLength())).getBytes());
+	    	
+			if (reqType.equals(PacketType.ERROR)) {
+				// Close thread
+				Thread.currentThread().interrupt();
+				return;
+				
+			} else if (reqType.equals(PacketType.READ) || reqType.equals(PacketType.WRITE)) {
+				
+				
+				if (reqType.equals(PacketType.READ)) {
+					processReadRequest();
+				} else {
+					try {
+						processWriteRequest();
+					} catch (InvalidDataException e) {
+						// TODO
+						System.out.println("Invalid data received");
+					}
 				}
+				
 			}
-			
-		}
+	    } catch (InvalidRequestException e) {
+	    	// TODO send error packet
+	    }
+		
 		
 	}
 
