@@ -395,28 +395,27 @@ public class Request implements Runnable {
 	    try {
 	    	PacketType reqType = getDataRequestType((new String(requestPacket.getData(), 0, requestPacket.getLength())).getBytes());
 	    	
-			if (reqType.equals(PacketType.ERROR)) {
-				// Close thread
-				Thread.currentThread().interrupt();
-				return;
-				
-			} else if (reqType.equals(PacketType.READ) || reqType.equals(PacketType.WRITE)) {
-				
-				
 				if (reqType.equals(PacketType.READ)) {
 					processReadRequest();
-				} else {
+					
+				} else if (reqType.equals(PacketType.WRITE)) {
 					try {
 						processWriteRequest();
 					} catch (InvalidDataException e) {
 						// TODO
 						System.out.println("Invalid data received");
 					}
+				} else {
+					Thread.currentThread().interrupt();
+					return;
 				}
-				
-			}
 	    } catch (InvalidRequestException e) {
 	    	// TODO send error packet
+	    	
+	    	System.out.println("InvalidRequestException Thrown: " + e.getMessage());
+	    	System.out.println("Closing thread...");
+	    	Thread.currentThread().interrupt();
+	    	return;
 	    }
 		
 		
