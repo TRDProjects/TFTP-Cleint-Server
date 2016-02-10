@@ -14,6 +14,7 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import server.Server.ErrorType;
 import server.Server.PacketAction;
 import server.Server.PacketType;
 
@@ -196,6 +197,21 @@ public class Request implements Runnable {
 		System.arraycopy(data, 0, dataPacket, 4, dataLength);
 		
 		return new DatagramPacket(dataPacket, dataPacket.length, address, port);
+	}
+	
+	
+	private DatagramPacket formErrorPacket(InetAddress address, int port, Server.ErrorType errorType, String errorMessage) {
+		byte[] errorPacket = new byte[5 + errorMessage.getBytes().length];
+		errorPacket[0] = 0;
+		errorPacket[1] = PacketType.ERROR.getOpcode();
+		errorPacket[2] = 0;
+		errorPacket[3] = errorType.getErrorCode();
+		
+		System.arraycopy(errorMessage.getBytes(), 0, errorPacket, 4, errorMessage.getBytes().length);
+		
+		errorPacket[errorPacket.length - 1] = 0;
+		
+		return new DatagramPacket(errorPacket, errorPacket.length, address, port);
 	}
 	
 	
@@ -409,11 +425,31 @@ public class Request implements Runnable {
 					Thread.currentThread().interrupt();
 					return;
 				}
-	    } catch (InvalidRequestException e) {
+	    } catch (InvalidRequestException invalidRequestException) {
 	    	// TODO send error packet
+	    	System.out.println("InvalidRequestException Thrown: " + invalidRequestException.getMessage());
+	    	System.out.println("Sending error packet and closing thread...");
 	    	
-	    	System.out.println("InvalidRequestException Thrown: " + e.getMessage());
-	    	System.out.println("Closing thread...");
+	    	// Form the error packet
+        	DatagramPacket sendErrorPacket = formErrorPacket(requestPacket.getAddress(), 
+        			requestPacket.getPort(), 
+        			ErrorType.ILLEGAL_TFTP_OPERATION, 
+        			invalidRequestException.getMessage());
+        	
+		    // Process the error packet to send
+		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
+			
+
+		    try {
+		    	// Send the error packet to the client
+		    	sendReceiveSocket.send(sendErrorPacket);
+		    } catch (IOException ioException) {
+		       ioException.printStackTrace();
+		       Thread.currentThread().interrupt();
+		       System.exit(1);
+		    }
+	    	
+		    // Close the thread
 	    	Thread.currentThread().interrupt();
 	    	return;
 	    }
