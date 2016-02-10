@@ -234,8 +234,14 @@ public class Request implements Runnable {
 				
 				if (data[0] == 0 && data[1] == PacketType.ACK.getOpcode()) {
 					if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
-						// The packet is valid
-						return;
+						
+						if (data[4] == 0) {
+							// The packet is valid
+							return;
+							
+						} else {
+							throw new IllegalTftpOperationException("Packet is too long. ACK packets should be 4 bytes");
+						}
 						
 					} else {
 						throw new IllegalTftpOperationException("Invalid block number. "
