@@ -52,11 +52,11 @@ public class Request implements Runnable {
 	}
 	
 	
-	private PacketType getDataRequestType(byte data[]) throws InvalidRequestException {
+	private PacketType getDataRequestType(byte data[]) throws InvalidPacketException {
 		
 		if (data.length < 2) {
 			// First two bytes that indicate a read/write request do not exist
-			throw new InvalidRequestException("Read or write request opcode (01 or 02) does not exist");
+			throw new InvalidPacketException("Read or write request opcode (01 or 02) does not exist");
 		} else {
 			// Check if the first and two bytes are either 0 1 or 0 2 for read or write request respectively
 			if (data[0] == 0 && ((data[1] == 1) || (data[1] == 2))) {
@@ -91,23 +91,23 @@ public class Request implements Runnable {
 				String modeString = new String(mode, 0, mode.length).trim();
 				
 				if (nameOfFileString.length() == 0) {
-					throw new InvalidRequestException("File name is empty");
+					throw new InvalidPacketException("File name is empty");
 					
 				} else if (modeString.length() == 0) {
-					throw new InvalidRequestException("Mode is empty");
+					throw new InvalidPacketException("Mode is empty");
 
 				} else if (!modeString.toLowerCase().equals(Server.Mode.NETASCII.name().toLowerCase()) && 
 						!modeString.toLowerCase().equals(Server.Mode.OCTET.name().toLowerCase())) {
-					throw new InvalidRequestException("Invalid mode. Received " + modeString + ". Must be netascii or octet.");
+					throw new InvalidPacketException("Invalid mode. Received " + modeString + ". Must be netascii or octet.");
 					
 				} else if (!middleZeroByteExists) {
-					throw new InvalidRequestException("0 byte between filename and mode was not found");
+					throw new InvalidPacketException("0 byte between filename and mode was not found");
 					
 				} else if (!lastZeroByteExists) {
-					throw new InvalidRequestException("Last byte is not a 0 byte");
+					throw new InvalidPacketException("Last byte is not a 0 byte");
 					
 				} else if (numOfZeroBytes != 2) {
-					throw new InvalidRequestException("More than two 0 bytes received");
+					throw new InvalidPacketException("More than two 0 bytes received");
 					
 				} else {
 					// The data is valid
@@ -120,11 +120,11 @@ public class Request implements Runnable {
 			    
 			} else {
 				// Invalid read/write request (i.e. first two bytes are not 0 1 or 0 2)
-				throw new InvalidRequestException("Invalid opcode. Must be 01 for a read request or 02 for a write request");
+				throw new InvalidPacketException("Invalid opcode. Must be 01 for a read request or 02 for a write request");
 			}
 		}
 		
-		throw new InvalidRequestException("Invalid request");
+		throw new InvalidPacketException("Invalid request");
 	}
 	
 	
@@ -425,7 +425,7 @@ public class Request implements Runnable {
 					Thread.currentThread().interrupt();
 					return;
 				}
-	    } catch (InvalidRequestException invalidRequestException) {
+	    } catch (InvalidPacketException invalidRequestException) {
 	    	// TODO send error packet
 	    	System.out.println("InvalidRequestException Thrown: " + invalidRequestException.getMessage());
 	    	System.out.println("Sending error packet and closing thread...");
