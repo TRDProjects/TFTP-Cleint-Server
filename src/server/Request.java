@@ -165,18 +165,52 @@ public class Request implements Runnable {
 		
 	}
 	
-	private boolean isValidDataPacket(DatagramPacket packet, byte[] expectedBlockNumber) {
-		byte[] data = packet.getData();
+	private void validateDataPacket(DatagramPacket packet, byte[] expectedBlockNumber)
+			throws IllegalTftpOperationException, UnknownTransferIdException {
 		
-		if (data[0] == 0 && data[1] == PacketType.DATA.getOpcode() && 
-				data[2] == expectedBlockNumber[0] && 
-				data[3] == expectedBlockNumber[1]) {
+		
+		// Make sure the address the packet is coming from is the same
+		if (packet.getAddress().equals(clientAddress)) {
 			
-			return true;
+			// Make sure the port the packet is coming from is the same
+			if (packet.getPort() == clientPort) {
+				
+				byte[] data = packet.getData();
+				
+				if (data[0] == 0 && data[1] == PacketType.DATA.getOpcode()) {
+					if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
+						
+						byte[] fileDataContainedInPacket = getFileDataFromDataPacket(packet);
+						
+						// Check to make sure the packet is not larger than expected
+						if (fileDataContainedInPacket.length <= 512) {
+							// The packet is valid
+							return;
+							
+						} else {
+							throw new IllegalTftpOperationException("DATA packet contains too much data. Maximum is 512 bytes");
+						}
+
+						
+					} else {
+						throw new IllegalTftpOperationException("DATA packet with invalid block number. "
+								+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
+										+ " but received " + data[2] + data[3]);
+					}
+					
+				} else {
+					throw new IllegalTftpOperationException("Invalid DATA packet opcode. Must be 0" + PacketType.DATA.getOpcode());
+				}
+				
+				
+			} else {
+				throw new UnknownTransferIdException("DATA packet received from invalid port");
+			}
 			
+		} else {
+			throw new UnknownTransferIdException("DATA packet received from invalid address");
 		}
 		
-		return false;
 	}
 	
 	private byte[] getFileDataFromDataPacket(DatagramPacket packet) {
@@ -235,12 +269,12 @@ public class Request implements Runnable {
 				if (data[0] == 0 && data[1] == PacketType.ACK.getOpcode()) {
 					if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
 						
-						if (data[4] == 0) {
+						if (data[data.length - 1] == 0) {
 							// The packet is valid
 							return;
 							
 						} else {
-							throw new IllegalTftpOperationException("Packet is too long. ACK packets should be 4 bytes");
+							throw new IllegalTftpOperationException("ACK packet is too long. Should be 4 bytes");
 						}
 						
 					} else {
@@ -255,11 +289,11 @@ public class Request implements Runnable {
 				
 				
 			} else {
-				throw new UnknownTransferIdException("Invalid port");
+				throw new UnknownTransferIdException("ACK packet received from invalid port");
 			}
 			
 		} else {
-			throw new UnknownTransferIdException("Invalid address");
+			throw new UnknownTransferIdException("ACK packet received from invalid address");
 		}
 	
 	}
@@ -300,7 +334,7 @@ public class Request implements Runnable {
 	    	    // Wait to receive an ACK
 	    	    
 	    	    // Construct a DatagramPacket for receiving the ACK packet
-	    	    // Note that an ACK packet is 4 bytes long but for error checking, we attempt to receive 5 bytes
+	    	    // Note that an ACK packet should be 4 bytes long but we create a larger buffer for error checking purposes
 	    	    byte dataForAck[] = new byte[5];
 	    	    receivePacket = new DatagramPacket(dataForAck, dataForAck.length);
 	    	
@@ -319,7 +353,7 @@ public class Request implements Runnable {
 	    	    	validateAckPacket(receivePacket, blockNumber);
 	    	    	
 	    	    } catch (IllegalTftpOperationException illegalOperationException) {
-	    	    	System.out.println("InvalidRequestException Thrown: " + illegalOperationException.getMessage());
+	    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
 	    	    	System.out.println("Sending error packet and closing thread...");
 	    	    	
 	    	    	// Form the error packet
@@ -400,7 +434,7 @@ public class Request implements Runnable {
 	}
 	
 	
-	private void processWriteRequest() throws InvalidDataException {
+	private void processWriteRequest() {
 		
 		System.out.println("Server (" + Thread.currentThread() + "): processing WRITE request");
 		
@@ -435,9 +469,11 @@ public class Request implements Runnable {
 			    // Increment the block number
 			    blockNumber = incrementBlockNumber(blockNumber);
 			    
-		        byte dataFromClient[] = new byte[516];
-		        
+	    	    // Construct a DatagramPacket for receiving the DATA packet
+	    	    // Note that a DATA packet can be at most 516 bytes long but we create a larger buffer for error checking purposes
+		        byte dataFromClient[] = new byte[517];
 				receivePacket = new DatagramPacket(dataFromClient, dataFromClient.length);
+				
 			    System.out.println("Server: waiting for Packet.\n");
 
 			    // Block until a datagram packet is received from the send/receive socket
@@ -454,9 +490,63 @@ public class Request implements Runnable {
 			    // Process the packet received
 			    printPacketInfo(receivePacket, PacketAction.RECEIVE);
 			    
-			    if (!isValidDataPacket(receivePacket, blockNumber)) {
-			    	throw new InvalidDataException("Server (" + Thread.currentThread() + "): Invalid DATA packet received");
-			    }
+			    
+			    // Validate the DATA packet
+			    try {
+			    	validateDataPacket(receivePacket, blockNumber);
+			    	
+	    	    } catch (IllegalTftpOperationException illegalOperationException) {
+	    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
+	    	    	System.out.println("Sending error packet and closing thread...");
+	    	    	
+	    	    	// Form the error packet
+	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+	            			receivePacket.getPort(), 
+	            			ErrorType.ILLEGAL_TFTP_OPERATION, 
+	            			illegalOperationException.getMessage());
+	            	
+	    		    // Process the error packet to send
+	    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
+	    			
+
+	    		    try {
+	    		    	// Send the error packet to the client
+	    		    	sendReceiveSocket.send(sendErrorPacket);
+	    		    } catch (IOException ioException) {
+	    		       ioException.printStackTrace();
+	    		       Thread.currentThread().interrupt();
+	    		       System.exit(1);
+	    		    }
+	    	    	
+	    		    // Close the thread
+	    	    	Thread.currentThread().interrupt();
+	    	    	return;
+	    	    	
+	    	    	
+	    	    } catch(UnknownTransferIdException unknownTransferIdException) {
+	    	    	System.out.println("UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
+	    	    	System.out.println("Sending error packet...");
+	    	    	
+	    	    	// Form the error packet
+	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+	            			receivePacket.getPort(), 
+	            			ErrorType.UNKNOWN_TRANSFER_ID, 
+	            			unknownTransferIdException.getMessage());
+	            	
+	    		    // Process the error packet to send
+	    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
+	    			
+
+	    		    try {
+	    		    	// Send the error packet to the client
+	    		    	sendReceiveSocket.send(sendErrorPacket);
+	    		    } catch (IOException ioException) {
+	    		       ioException.printStackTrace();
+	    		       Thread.currentThread().interrupt();
+	    		       System.exit(1);
+	    		    }
+	    	    	
+	    	    }
 			    
 			    // Update the length of the file data
 			    dataLength = getFileDataFromDataPacket(receivePacket).length;
@@ -508,12 +598,8 @@ public class Request implements Runnable {
 					processReadRequest();
 					
 				} else if (reqType.equals(PacketType.WRITE)) {
-					try {
-						processWriteRequest();
-					} catch (InvalidDataException e) {
-						// TODO
-						System.out.println("Invalid data received");
-					}
+				    processWriteRequest();
+				    
 				} else {
 					Thread.currentThread().interrupt();
 					return;
