@@ -23,6 +23,9 @@ public class Request implements Runnable {
 	private DatagramSocket sendReceiveSocket;
 	private DatagramPacket requestPacket, sendPacket, receivePacket;
 	
+	private InetAddress clientAddress;
+	private int clientPort;
+	
 	private String fileName;
 	
 	
@@ -36,6 +39,9 @@ public class Request implements Runnable {
             se.printStackTrace();
             System.exit(1);
         }
+	    
+	    this.clientAddress = requestPacket.getAddress();
+	    this.clientPort = requestPacket.getPort();
 	}
 	
 	public void printPacketInfo(DatagramPacket packet, Server.PacketAction action) {
@@ -52,11 +58,11 @@ public class Request implements Runnable {
 	}
 	
 	
-	private PacketType getDataRequestType(byte data[]) throws InvalidPacketException {
+	private PacketType getDataRequestType(byte data[]) throws IllegalTftpOperationException {
 		
 		if (data.length < 2) {
 			// First two bytes that indicate a read/write request do not exist
-			throw new InvalidPacketException("Read or write request opcode (01 or 02) does not exist");
+			throw new IllegalTftpOperationException("Read or write request opcode (01 or 02) does not exist");
 		} else {
 			// Check if the first and two bytes are either 0 1 or 0 2 for read or write request respectively
 			if (data[0] == 0 && ((data[1] == 1) || (data[1] == 2))) {
@@ -91,23 +97,23 @@ public class Request implements Runnable {
 				String modeString = new String(mode, 0, mode.length).trim();
 				
 				if (nameOfFileString.length() == 0) {
-					throw new InvalidPacketException("File name is empty");
+					throw new IllegalTftpOperationException("File name is empty");
 					
 				} else if (modeString.length() == 0) {
-					throw new InvalidPacketException("Mode is empty");
+					throw new IllegalTftpOperationException("Mode is empty");
 
 				} else if (!modeString.toLowerCase().equals(Server.Mode.NETASCII.name().toLowerCase()) && 
 						!modeString.toLowerCase().equals(Server.Mode.OCTET.name().toLowerCase())) {
-					throw new InvalidPacketException("Invalid mode. Received " + modeString + ". Must be netascii or octet.");
+					throw new IllegalTftpOperationException("Invalid mode. Received " + modeString + ". Must be netascii or octet.");
 					
 				} else if (!middleZeroByteExists) {
-					throw new InvalidPacketException("0 byte between filename and mode was not found");
+					throw new IllegalTftpOperationException("0 byte between filename and mode was not found");
 					
 				} else if (!lastZeroByteExists) {
-					throw new InvalidPacketException("Last byte is not a 0 byte");
+					throw new IllegalTftpOperationException("Last byte is not a 0 byte");
 					
 				} else if (numOfZeroBytes != 2) {
-					throw new InvalidPacketException("More than two 0 bytes received");
+					throw new IllegalTftpOperationException("More than two 0 bytes received");
 					
 				} else {
 					// The data is valid
@@ -120,11 +126,11 @@ public class Request implements Runnable {
 			    
 			} else {
 				// Invalid read/write request (i.e. first two bytes are not 0 1 or 0 2)
-				throw new InvalidPacketException("Invalid opcode. Must be 01 for a read request or 02 for a write request");
+				throw new IllegalTftpOperationException("Invalid opcode. Must be 01 for a read request or 02 for a write request");
 			}
 		}
 		
-		throw new InvalidPacketException("Invalid request");
+		throw new IllegalTftpOperationException("Invalid request");
 	}
 	
 	
@@ -215,18 +221,41 @@ public class Request implements Runnable {
 	}
 	
 	
-	private boolean isValidACKPacket(DatagramPacket packet, byte[] expectedBlockNumber) {
-		byte[] data = packet.getData();
+	private void validateAckPacket(DatagramPacket packet, byte[] expectedBlockNumber) 
+			throws IllegalTftpOperationException, UnknownTransferIdException {
 		
-		if (data.length == 4) {
-			if (data[0] == 0 && data[1] == PacketType.ACK.getOpcode() && 
-					data[2] == expectedBlockNumber[0] && 
-					data[3] == expectedBlockNumber[1]) {
-				return true;
+		// Make sure the address the packet is coming from is the same
+		if (packet.getAddress().equals(clientAddress)) {
+			
+			// Make sure the port the packet is coming from is the same
+			if (packet.getPort() == clientPort) {
+				
+				byte[] data = packet.getData();
+				
+				if (data[0] == 0 && data[1] == PacketType.ACK.getOpcode()) {
+					if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
+						// The packet is valid
+						return;
+						
+					} else {
+						throw new IllegalTftpOperationException("Invalid block number. "
+								+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
+										+ " but received " + data[2] + data[3]);
+					}
+					
+				} else {
+					throw new IllegalTftpOperationException("Invalid ACK packet opcode. Must be 0" + PacketType.ACK.getOpcode());
+				}
+				
+				
+			} else {
+				throw new UnknownTransferIdException("Invalid port");
 			}
+			
+		} else {
+			throw new UnknownTransferIdException("Invalid address");
 		}
-		
-		return false;
+	
 	}
 	
 	private void processReadRequest() {
@@ -264,8 +293,9 @@ public class Request implements Runnable {
 	    	    
 	    	    // Wait to receive an ACK
 	    	    
-	    	    // Construct a DatagramPacket for receiving packets
-	    	    byte dataForAck[] = new byte[4];
+	    	    // Construct a DatagramPacket for receiving the ACK packet
+	    	    // Note that an ACK packet is 4 bytes long but for error checking, we attempt to receive 5 bytes
+	    	    byte dataForAck[] = new byte[5];
 	    	    receivePacket = new DatagramPacket(dataForAck, dataForAck.length);
 	    	
 	    	    try {
@@ -278,10 +308,67 @@ public class Request implements Runnable {
 	    	
 	    	    printPacketInfo(receivePacket, PacketAction.RECEIVE);
 	    	    
-	    	    if (isValidACKPacket(receivePacket, blockNumber)) {
-	    	    	blockNumber = incrementBlockNumber(blockNumber);
+	    	    // Validate the ACK packet
+	    	    try {
+	    	    	validateAckPacket(receivePacket, blockNumber);
+	    	    	
+	    	    } catch (IllegalTftpOperationException illegalOperationException) {
+	    	    	System.out.println("InvalidRequestException Thrown: " + illegalOperationException.getMessage());
+	    	    	System.out.println("Sending error packet and closing thread...");
+	    	    	
+	    	    	// Form the error packet
+	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+	            			receivePacket.getPort(), 
+	            			ErrorType.ILLEGAL_TFTP_OPERATION, 
+	            			illegalOperationException.getMessage());
+	            	
+	    		    // Process the error packet to send
+	    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
+	    			
+
+	    		    try {
+	    		    	// Send the error packet to the client
+	    		    	sendReceiveSocket.send(sendErrorPacket);
+	    		    } catch (IOException ioException) {
+	    		       ioException.printStackTrace();
+	    		       Thread.currentThread().interrupt();
+	    		       System.exit(1);
+	    		    }
+	    	    	
+	    		    // Close the thread
+	    	    	Thread.currentThread().interrupt();
+	    	    	return;
+	    	    	
+	    	    	
+	    	    } catch(UnknownTransferIdException unknownTransferIdException) {
+	    	    	System.out.println("UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
+	    	    	System.out.println("Sending error packet...");
+	    	    	
+	    	    	// Form the error packet
+	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+	            			receivePacket.getPort(), 
+	            			ErrorType.UNKNOWN_TRANSFER_ID, 
+	            			unknownTransferIdException.getMessage());
+	            	
+	    		    // Process the error packet to send
+	    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
+	    			
+
+	    		    try {
+	    		    	// Send the error packet to the client
+	    		    	sendReceiveSocket.send(sendErrorPacket);
+	    		    } catch (IOException ioException) {
+	    		       ioException.printStackTrace();
+	    		       Thread.currentThread().interrupt();
+	    		       System.exit(1);
+	    		    }
+	    	    	
 	    	    }
-	        	
+	    	    
+	    	        
+                // ACK packet has been validated so we increment the block number now
+	    	    blockNumber = incrementBlockNumber(blockNumber);
+	   
 	        }
 	        
 	        in.close();
@@ -425,16 +512,15 @@ public class Request implements Runnable {
 					Thread.currentThread().interrupt();
 					return;
 				}
-	    } catch (InvalidPacketException invalidRequestException) {
-	    	// TODO send error packet
-	    	System.out.println("InvalidRequestException Thrown: " + invalidRequestException.getMessage());
+	    } catch (IllegalTftpOperationException invalidPacketException) {
+	    	System.out.println("InvalidRequestException Thrown: " + invalidPacketException.getMessage());
 	    	System.out.println("Sending error packet and closing thread...");
 	    	
 	    	// Form the error packet
         	DatagramPacket sendErrorPacket = formErrorPacket(requestPacket.getAddress(), 
         			requestPacket.getPort(), 
         			ErrorType.ILLEGAL_TFTP_OPERATION, 
-        			invalidRequestException.getMessage());
+        			invalidPacketException.getMessage());
         	
 		    // Process the error packet to send
 		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
