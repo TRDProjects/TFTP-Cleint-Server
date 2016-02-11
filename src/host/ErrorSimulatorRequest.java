@@ -29,227 +29,142 @@ public class ErrorSimulatorRequest implements Runnable {
         }
   }
   
-  public void errorSim(int caller, DatagramPacket data){
+  
+  private void modifyRequestPacketUi(DatagramPacket data) {
+	  System.out.println("\n------------- Request Packet Modification Menu ----------------");
+	  System.out.println("Enter the error number of the error would you like to simulate: \n");
 	  
-	  // caller differentiates who's calling errorSim
-	  // 1 means its the client sending to server
-	  // 2 means its the server sending to client
+	  System.out.println("0 : No error (i.e do not modify the packet)");
 	  
-	  System.out.println("enter the error number of the error would you like to simulate /n");
+	  System.out.println("1 : Invalid request packet TFTP opcode");
+	  System.out.println("2 : Empty filename");
+	  System.out.println("3 : Empty mode");
+	  System.out.println("4 : Invalid mode");
+	  System.out.println("---------------------------------------------------------------\n");
 	  
-	  // No error, error sim does nothing
-	  System.out.println("0 : no error");
-	  
-	  
-	  /** ERROR CODE 4 **/	  
-	  System.out.println("error # : who will throw the error : cause of error");
-	  // Invalid Request Packet errors
-	  System.out.println("1  : server : Invalid Request Packet TFTP opcode RRQ");
-	  System.out.println("2  : server : Invalid Request Packet TFTP opcode WRQ");
-	  System.out.println("3  : server : Invalid Request Packet format");
-	  System.out.println("4  : server : Invalid Request Packet filename");
-	  System.out.println("5  : server : invalid Request Packet mode");
-	  
-	  //Invalid ACK packet
-	  System.out.println("6  : server : invalid ACK packet length"); //less than or more than 4 bytes
-	  System.out.println("7  : server : invalid ACK packet TFTP opcode"); //anything other than 4
-	  System.out.println("8  : server : invalid ACK packet block number");
-	  System.out.println("9  : client : invalid ACK packet length"); //less than or more than 4 bytes
-	  System.out.println("10 : client : invalid ACK packet TFTP opcode"); //anything other than 4
-	  System.out.println("11 : client : invalid ACK packet block number");
-	  
-	  //Invalid DATA packet
-	  System.out.println("12 : server : invalid DATA packet length"); //longer than 516 bytes
-	  System.out.println("13 : server : invalid DATA packet block number");
-	  System.out.println("14 : client : invalid DATA packet length"); //longer than 516 bytes
-	  System.out.println("15 : clientgr : invalid DATA packet block number");
-	  
-	  /** ERROR CODE 5 **/	
-	  System.out.println("16 : server : ACK packet from invalid client");
-	  System.out.println("17 : cleint : ACK packet from invalid server");
-	  System.out.println("18 : server : DATA packet from invalid client");
-	  System.out.println("19 : client : DATA packet from invalid server");
-	  
-	  
-	  //get the requested error from the user
+	  // Get the requested error from the user
 	  int error =  Keyboard.getInteger();
 
 	  
-	  //make sure it's a valid entry
-	  while(error > 19 || error < 0){
+	  // Make sure it's a valid entry
+	  while(error > 4  || error < 0){
 		  System.out.println("try again");
 		  error = Keyboard.getInteger();
 	  }
 	  
-	  /** ERROR HANDLING **/
-	  // do nothing : client to server
-	  if(error == 0){
-	      try {
-	          sendReceiveSocket.send(data);
-	        } catch (IOException e) {
-	           e.printStackTrace();
-	           System.exit(1);
-	        }	 
-	      }
 	  
-	  //FROM CLIENT TO SERVER - 1  : server : Invalid Request Packet TFTP opcode RRQ
-	  if(error == 1 && caller  == 1){
+     if (error == 1) {
+		  // TODO Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 01 or 02)
+		  // TODO Then call method that modifies the packet
 		  
-	  }
-	  //FROM SERVER TO CLIENT -  this should never happen : servers don't send clients WRQ's
-	  if(error == 1 && caller  == 2){
-		  // up to you what you want to do here, maybe just redirect to condition 0? (do nothing)
-		  // theres more stuff like this below.
-	  }
-	  
-	  //FROM CLIENT TO SERVER - 2  : server : Invalid Request Packet TFTP opcode WRQ
-	  if(error == 2 && caller  == 1){
+	  } else if (error == 2) {
+		  // TODO call method that removes file name from the packet
 		  
-	  }
-	  //FROM SERVER TO CLIENT -  this should never happen : servers don't send clients WRQ's
-	  if(error == 2 && caller  == 2){
+	  } else if (error == 3) {
+		// TODO call method that removes mode from the packet
 		  
-	  }
-	  
-	  //FROM CLIENT TO SERVER -  3  : server : Invalid Request Packet format
-	  if(error == 3 && caller == 1){
+	  } else if (error == 4) {
+		// TODO get input from the user of the mode they would like to use
+		// TODO call method that changes the mode to what the user passed in
 		  
+	  } else {
+		  // Do not modify packet
+		  return;
 	  }
-	  //FROM SERVER TO CLIENT -  3  : server : Invalid Request Packet format
-	  if(error == 3 && caller == 2){
-		  
-	  }
-	  
-	  //FROM CLIENT TO SERVER -  4  : server : Invalid Request Packet filename
-	  if(error == 4 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  4  : server : Invalid Request Packet filename
-	  if(error == 4 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  5  : server : invalid Request Packet mode
-	  if(error == 5 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  5  : server : invalid Request Packet mode
-	  if(error == 5 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  6  : server : invalid ACK packet length
-	  if(error == 6 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  6  : server : invalid ACK packet length
-	  if(error == 6 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  7  : server : invalid ACK packet TFTP opcode
-	  if(error == 7 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  7  : server : invalid ACK packet TFTP opcode
-	  if(error == 7 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  8  : server : invalid ACK packet block number
-	  if(error == 8 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  8  : server : invalid ACK packet block number
-	  if(error == 8 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  9  : client : invalid ACK packet length
-	  if(error == 9 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  9  : client : invalid ACK packet length
-	  if(error == 9 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  10 : client : invalid ACK packet TFTP opcode
-	  if(error == 10 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  10 : client : invalid ACK packet TFTP opcode
-	  if(error == 10 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  11 : client : invalid ACK packet block number
-	  if(error == 11 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  11 : client : invalid ACK packet block number
-	  if(error == 11 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  12 : server : invalid DATA packet length
-	  if(error == 12 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  12 : server : invalid DATA packet length
-	  if(error == 12 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  13 : server : invalid DATA packet block number
-	  if(error == 13 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  13 : server : invalid DATA packet block number
-	  if(error == 13 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  14 : client : invalid DATA packet length
-	  if(error == 14 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  14 : client : invalid DATA packet length
-	  if(error == 14 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  15 : client : invalid DATA packet block number
-	  if(error == 15 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  15 : client : invalid DATA packet block number
-	  if(error == 15 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  16 : server : ACK packet from invalid client
-	  if(error == 16 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  16 : server : ACK packet from invalid client
-	  if(error == 16 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  17 : cleint : ACK packet from invalid server
-	  if(error == 17 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  17 : cleint : ACK packet from invalid server
-	  if(error == 17 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  18 : server : DATA packet from invalid client
-	  if(error == 18 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  18 : server : DATA packet from invalid client
-	  if(error == 18 && caller == 2){
-		  
-	  }
-	  //FROM CLIENT TO SERVER -  19 : client : DATA packet from invalid server
-	  if(error == 19 && caller == 1){
-		  
-	  }
-	  //FROM SERVER TO CLIENT -  19 : client : DATA packet from invalid server
-	  if(error == 19 && caller == 2){
-		  
-	  }
-	  
   }
+  
+  
+  private void modifyAckPacketUi(DatagramPacket data) {
+	  System.out.println("\n------------- ACK Packet Modification Menu ----------------");
+	  System.out.println("Enter the error number of the error would you like to simulate: \n");
+	  
+	  System.out.println("0 : No error (i.e do not modify the packet)");
+	  
+	  System.out.println("1 : Invalid ACK packet TFTP opcode");
+	  System.out.println("2 : Invalid host (change to different host)");
+	  System.out.println("3 : Invalid port (change to different port)");
+	  System.out.println("4 : Invalid block number");
+	  System.out.println("---------------------------------------------------------------\n");
+	  
+	  // Get the requested error from the user
+	  int error =  Keyboard.getInteger();
+
+	  
+	  // Make sure it's a valid entry
+	  while(error > 4 || error < 0){
+		  System.out.println("try again");
+		  error = Keyboard.getInteger();
+	  }
+	  
+	  
+     if (error == 1) {
+		  // TODO Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 04)
+		  // TODO Then call method that modifies the packet
+		  
+	  } else if (error == 2) {
+		  // TODO call method that changes the host of the packet
+		  
+	  } else if (error == 3) {
+		// TODO call method that changes the port of the packet
+		  
+	  } else if (error == 4) {
+		// TODO get input from the user of the block number they would like to use
+		// TODO then call method that changes the block number to what the user passed in
+		  
+	  } else {
+		  // Do not modify packet
+		  return;
+	  }
+  }
+  
+  
+  private void modifyDataPacketUi(DatagramPacket data) {
+	  System.out.println("\n------------- DATA Packet Modification Menu ----------------");
+	  System.out.println("Enter the error number of the error would you like to simulate: \n");
+	  
+	  System.out.println("0 : No error (i.e do not modify the packet)");
+	  
+	  System.out.println("1 : Invalid DATA packet TFTP opcode");
+	  System.out.println("2 : Invalid host (change to different host)");
+	  System.out.println("3 : Invalid port (change to different port)");
+	  System.out.println("4 : Invalid block number");
+	  System.out.println("4 : Large DATA packet (larger than 516 bytes)");
+	  System.out.println("---------------------------------------------------------------\n");
+	  
+	  // Get the requested error from the user
+	  int error =  Keyboard.getInteger();
+
+	  
+	  // Make sure it's a valid entry
+	  while(error > 5 || error < 0){
+		  System.out.println("try again");
+		  error = Keyboard.getInteger();
+	  }
+	  
+	  
+     if (error == 1) {
+		  // TODO Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 03)
+		  // TODO Then call method that modifies the packet
+		  
+	  } else if (error == 2) {
+		  // TODO call method that changes the host of the packet
+		  
+	  } else if (error == 3) {
+		  // TODO call method that changes the port of the packet
+		  
+	  } else if (error == 4) {
+		  // TODO get input from the user of the block number they would like to use
+		  // TODO then call method that changes the block number to what the user passed in
+		  
+	  } else if (error == 5) {
+		  // TODO call method that adds junk data to the original packet until the packet is 517 bytes long
+			    
+	  } else {
+		  // Do not modify packet
+		  return;
+	  }
+  }
+  
   
   public void printPacketInfo(DatagramPacket packet, ErrorSimulator.PacketAction action) {
     System.out.println("\n");
@@ -264,6 +179,35 @@ public class ErrorSimulatorRequest implements Runnable {
     System.out.println("       - Bytes: " + Arrays.toString(dataString.getBytes()));
   }
   
+  
+  private ErrorSimulator.PacketType getPacketType(DatagramPacket packet) throws InvalidPacketTypeException {
+	  byte[] data = packet.getData();
+	  
+	  if (data[0] == 0) {
+		  
+		  if (data[1] == ErrorSimulator.PacketType.READ.getOpcode()) {
+			  return ErrorSimulator.PacketType.READ;
+			  
+		  } else if (data[1] == ErrorSimulator.PacketType.WRITE.getOpcode()) {
+			  return ErrorSimulator.PacketType.WRITE;
+			  
+		  } else if (data[1] == ErrorSimulator.PacketType.ACK.getOpcode()) {
+			  return ErrorSimulator.PacketType.ACK;
+			  
+		  } else if (data[1] == ErrorSimulator.PacketType.DATA.getOpcode()) {
+			  return ErrorSimulator.PacketType.DATA;
+			  
+		  } else if (data[1] == ErrorSimulator.PacketType.ERROR.getOpcode()) {
+			  return ErrorSimulator.PacketType.ERROR;
+			  
+		  } else {
+			  throw new InvalidPacketTypeException("Invalid packet type: second byte is " + data[1]);  
+		  }
+		  
+	  } else {
+		 throw new InvalidPacketTypeException("Invalid packet type: first byte is not a 0 byte");
+	  }
+  }
   
 
   @Override
@@ -283,8 +227,13 @@ public class ErrorSimulatorRequest implements Runnable {
           System.exit(1);
       }
       
+      // Show the menu UI for packet modification for a request packet
+      modifyRequestPacketUi(sendPacketServer);
+      
+      
       // Process the packet to send
       printPacketInfo(sendPacketServer, PacketAction.SEND);
+      
           
       // Send the datagram packet to the server via the send/receive socket. 
       try {
@@ -305,7 +254,7 @@ public class ErrorSimulatorRequest implements Runnable {
   
   public void receiveFromClientAndSendToServer() {
       // Construct a DatagramPacket for receiving packets
-      byte dataFromClient[] = new byte[516];
+      byte dataFromClient[] = new byte[517];
       receivePacketClient = new DatagramPacket(dataFromClient, dataFromClient.length);
       System.out.println("Error Simulator: waiting for Packet.\n");
       
@@ -320,20 +269,36 @@ public class ErrorSimulatorRequest implements Runnable {
           System.exit(1);
       }
       
-      
-    // Construct a datagram packet to send to the Server
-    // This assumes that the Server is running on localhost
+      // Process the packet received
+      printPacketInfo(receivePacketClient, PacketAction.RECEIVE);
+       
+      // Construct a datagram packet to send to the Server
+      // This assumes that the Server is running on localhost
       sendPacketServer = new DatagramPacket(receivePacketClient.getData(), receivePacketClient.getLength(),
             receivePacketServer.getAddress(), receivePacketServer.getPort());
+      
+      
+      // Check the type of the packet received (i.e. ACK or DATA) and show the proper packet modification menu UI
+      try {
+    	  ErrorSimulator.PacketType typeOfPacketReceived = getPacketType(sendPacketServer);
+    	  
+    	  if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.ACK)) {
+    		  modifyAckPacketUi(sendPacketServer);
+    		  
+    	  } else if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.DATA)) {
+    		  modifyDataPacketUi(sendPacketServer);
+    	  }
+      } catch (InvalidPacketTypeException e) {
+    	  System.out.println("InvalidPacketTypeException thrown: received packet with invalid opcode from server or client: " + e.getMessage());
+      }
+      
       
       // Process the packet to send
       printPacketInfo(sendPacketServer, PacketAction.SEND);
           
       // Send the datagram packet to the server via the send/receive socket. 
-      //sends the datagram packet to the errorSim which will either alter it, or not, and send it on to the server
       try {
-    	 errorSim(1, sendPacketServer);
-      // sendReceiveSocket.send(sendPacketServer);
+        sendReceiveSocket.send(sendPacketServer);
       } catch (Exception e) {
          e.printStackTrace();
          System.exit(1);
@@ -345,7 +310,7 @@ public class ErrorSimulatorRequest implements Runnable {
   
   private void receiveFromServerAndSendToClient() {
       // Construct a DatagramPacket for receiving packets
-      byte dataFromServer[] = new byte[516];
+      byte dataFromServer[] = new byte[517];
       receivePacketServer = new DatagramPacket(dataFromServer, dataFromServer.length);
   
       try {
@@ -360,22 +325,34 @@ public class ErrorSimulatorRequest implements Runnable {
       printPacketInfo(receivePacketServer, PacketAction.RECEIVE);
       
     
-    // Construct a datagram packet to send to the Client
+      // Construct a datagram packet to send to the Client
       String dataReceivedString = new String(receivePacketServer.getData(), 0, receivePacketServer.getLength());
       
       sendPacketClient = new DatagramPacket(dataReceivedString.getBytes(), dataReceivedString.getBytes().length,
           requestPacket.getAddress(), requestPacket.getPort());
       
+      
+      // Check the type of the packet received (i.e. ACK or DATA) and show the proper packet modification menu UI
+      try {
+    	  ErrorSimulator.PacketType typeOfPacketReceived = getPacketType(sendPacketClient);
+    	  
+    	  if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.ACK)) {
+    		  modifyAckPacketUi(sendPacketClient);
+    		  
+    	  } else if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.DATA)) {
+    		  modifyDataPacketUi(sendPacketClient);
+    	  }
+      } catch (InvalidPacketTypeException e) {
+    	  System.out.println("InvalidPacketTypeException thrown: received packet with invalid opcode from server or client: " + e.getMessage());
+      }
+      
       // Process the packet to send
       printPacketInfo(sendPacketClient, PacketAction.SEND);
       
-    
         
       // Send the datagram packet to the Client
-      //sends the datagram packet to the errorSim which will either alter it, or not, and send it on to the client
       try {
-    	errorSim(2, sendPacketClient);
-        //sendReceiveSocket.send(sendPacketClient);
+        sendReceiveSocket.send(sendPacketClient);
       } catch (Exception e) {
          e.printStackTrace();
          System.exit(1);

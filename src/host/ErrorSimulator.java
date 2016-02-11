@@ -13,6 +13,24 @@ public class ErrorSimulator {
 		SEND, RECEIVE
 	}
 	
+	public static enum PacketType {
+		READ((byte) 1), 
+		WRITE((byte) 2), 
+		DATA((byte) 3), 
+		ACK((byte) 4), 
+		ERROR((byte) 5);
+		
+		private byte opcode;
+		
+		private PacketType(byte opcode) {
+			this.opcode = opcode;
+		}
+		
+		public byte getOpcode() {
+			return opcode;
+		}
+	}
+	
 	DatagramPacket receivePacketClient;
 	DatagramSocket receiveSocket;
 	

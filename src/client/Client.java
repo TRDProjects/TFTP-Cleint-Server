@@ -209,7 +209,6 @@ public class Client {
 		int dataLength = 512;
 	
 	    
-	 	
 	    do {
 			// Construct an ACK datagram packet
 		    try {
@@ -262,6 +261,7 @@ public class Client {
 	    System.out.println("Client (" + Thread.currentThread() + "): Finished receiving file");
 	    
 	}
+	
 	
 	public void sendAndReceive(PacketType type, String mode, String fileName) {
 		
@@ -362,12 +362,12 @@ public class Client {
 	
 	public static void main(String args[]) {
 		
-		Client newClient = new Client(Mode.NORMAL);
+		Client newClient = new Client(Mode.TEST);
 		
 		
 		while(true) {
 			System.out.println("------------------------------------------------------");
-			System.out.println("Select from the following options by entering a number (i.e. 1) or enter 'q' to exit:\n");
+			System.out.println("Select from the following options by entering a number (i.e. 1) or enter 'q' to exit: \n");
 			System.out.println("1. Read file");
 			System.out.println("2. Write file");
 			
@@ -381,16 +381,16 @@ public class Client {
 				String fileName = "";
 				String mode = "";
 				
-				System.out.print("Enter the name of the file (if left blank then testFileFromServer.txt will be used): ");
+				System.out.print("Enter the name of the file (if * typed then testFileFromServer.txt will be used): ");
 				fileName = Keyboard.getString();
-				if (fileName.trim().isEmpty()) {
+				if (fileName.trim().equals("*")) {
 					fileName = "testFileFromServer.txt";
 				}
 				
-				System.out.println("Enter the mode (if left blank then netascii will be used): ");
+				System.out.println("Enter the mode (if * typed then netascii will be used): ");
 				mode = Keyboard.getString();
 				
-				if (mode.trim().isEmpty()) {
+				if (mode.trim().equals("*")) {
 					mode = "netascii";
 				}
 				System.out.println("\nSending READ request...");
@@ -404,16 +404,16 @@ public class Client {
 				String fileName = "";
 				String mode = "";
 				
-				System.out.print("Enter the name of the file (if left blank then testFileFromClient.txt will be used): ");
+				System.out.print("Enter the name of the file (if * typed then testFileFromClient.txt will be used): ");
 				fileName = Keyboard.getString();
-				if (fileName.trim().isEmpty()) {
+				if (fileName.trim().equals("*")) {
 					fileName = "testFileFromClient.txt";
 				}
 				
-				System.out.println("Enter the mode (if left blank then netascii will be used): ");
+				System.out.println("Enter the mode (if * typed then netascii will be used): ");
 				mode = Keyboard.getString();
 				
-				if (mode.trim().isEmpty()) {
+				if (mode.trim().equals("*")) {
 					mode = "netascii";
 				}
 				System.out.println("\nSending WRITE request...");
