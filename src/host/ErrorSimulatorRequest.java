@@ -92,80 +92,160 @@ public class ErrorSimulatorRequest implements Runnable {
 	        }	 
 	      }
 	  
-	  //1  : server : Invalid Request Packet TFTP opcode RRQ
-	  if(error == 1){
+	  //FROM CLIENT TO SERVER - 1  : server : Invalid Request Packet TFTP opcode RRQ
+	  if(error == 1 && caller  == 1){
 		  
 	  }
-	  //2  : server : Invalid Request Packet TFTP opcode WRQ
-	  if(error == 2){
+	  //FROM SERVER TO CLIENT -  this should never happen : servers don't send clients WRQ's
+	  if(error == 1 && caller  == 2){
+		  // up to you what you want to do here, maybe just redirect to condition 0? (do nothing)
+		  // theres more stuff like this below.
+	  }
+	  
+	  //FROM CLIENT TO SERVER - 2  : server : Invalid Request Packet TFTP opcode WRQ
+	  if(error == 2 && caller  == 1){
 		  
 	  }
-	  //3  : server : Invalid Request Packet format
-	  if(error == 3){
+	  //FROM SERVER TO CLIENT -  this should never happen : servers don't send clients WRQ's
+	  if(error == 2 && caller  == 2){
 		  
 	  }
-	  //4  : server : Invalid Request Packet filename
-	  if(error == 4){
+	  
+	  //FROM CLIENT TO SERVER -  3  : server : Invalid Request Packet format
+	  if(error == 3 && caller == 1){
 		  
 	  }
-	  //5  : server : invalid Request Packet mode
-	  if(error == 5){
+	  //FROM SERVER TO CLIENT -  3  : server : Invalid Request Packet format
+	  if(error == 3 && caller == 2){
 		  
 	  }
-	  //6  : server : invalid ACK packet length
-	  if(error == 6){
+	  
+	  //FROM CLIENT TO SERVER -  4  : server : Invalid Request Packet filename
+	  if(error == 4 && caller == 1){
 		  
 	  }
-	  //7  : server : invalid ACK packet TFTP opcode
-	  if(error == 7){
+	  //FROM SERVER TO CLIENT -  4  : server : Invalid Request Packet filename
+	  if(error == 4 && caller == 2){
 		  
 	  }
-	  //8  : server : invalid ACK packet block number
-	  if(error == 8){
+	  //FROM CLIENT TO SERVER -  5  : server : invalid Request Packet mode
+	  if(error == 5 && caller == 1){
 		  
 	  }
-	  //9  : client : invalid ACK packet length
-	  if(error == 9){
+	  //FROM SERVER TO CLIENT -  5  : server : invalid Request Packet mode
+	  if(error == 5 && caller == 2){
 		  
 	  }
-	  //10 : client : invalid ACK packet TFTP opcode
-	  if(error == 10){
+	  //FROM CLIENT TO SERVER -  6  : server : invalid ACK packet length
+	  if(error == 6 && caller == 1){
 		  
 	  }
-	  //11 : client : invalid ACK packet block number
-	  if(error == 11){
+	  //FROM SERVER TO CLIENT -  6  : server : invalid ACK packet length
+	  if(error == 6 && caller == 2){
 		  
 	  }
-	  //12 : server : invalid DATA packet length
-	  if(error == 12){
+	  //FROM CLIENT TO SERVER -  7  : server : invalid ACK packet TFTP opcode
+	  if(error == 7 && caller == 1){
 		  
 	  }
-	  //13 : server : invalid DATA packet block number
-	  if(error == 13){
+	  //FROM SERVER TO CLIENT -  7  : server : invalid ACK packet TFTP opcode
+	  if(error == 7 && caller == 2){
 		  
 	  }
-	  //14 : client : invalid DATA packet length
-	  if(error == 14){
+	  //FROM CLIENT TO SERVER -  8  : server : invalid ACK packet block number
+	  if(error == 8 && caller == 1){
 		  
 	  }
-	  //15 : clientgr : invalid DATA packet block number
-	  if(error == 15){
+	  //FROM SERVER TO CLIENT -  8  : server : invalid ACK packet block number
+	  if(error == 8 && caller == 2){
 		  
 	  }
-	  //16 : server : ACK packet from invalid client
-	  if(error == 16){
+	  //FROM CLIENT TO SERVER -  9  : client : invalid ACK packet length
+	  if(error == 9 && caller == 1){
 		  
 	  }
-	  //17 : cleint : ACK packet from invalid server
-	  if(error == 17){
+	  //FROM SERVER TO CLIENT -  9  : client : invalid ACK packet length
+	  if(error == 9 && caller == 2){
 		  
 	  }
-	  //18 : server : DATA packet from invalid client
-	  if(error == 18){
+	  //FROM CLIENT TO SERVER -  10 : client : invalid ACK packet TFTP opcode
+	  if(error == 10 && caller == 1){
 		  
 	  }
-	  //19 : client : DATA packet from invalid server
-	  if(error == 19){
+	  //FROM SERVER TO CLIENT -  10 : client : invalid ACK packet TFTP opcode
+	  if(error == 10 && caller == 2){
+		  
+	  }
+	  //FROM CLIENT TO SERVER -  11 : client : invalid ACK packet block number
+	  if(error == 11 && caller == 1){
+		  
+	  }
+	  //FROM SERVER TO CLIENT -  11 : client : invalid ACK packet block number
+	  if(error == 11 && caller == 2){
+		  
+	  }
+	  //FROM CLIENT TO SERVER -  12 : server : invalid DATA packet length
+	  if(error == 12 && caller == 1){
+		  
+	  }
+	  //FROM SERVER TO CLIENT -  12 : server : invalid DATA packet length
+	  if(error == 12 && caller == 2){
+		  
+	  }
+	  //FROM CLIENT TO SERVER -  13 : server : invalid DATA packet block number
+	  if(error == 13 && caller == 1){
+		  
+	  }
+	  //FROM SERVER TO CLIENT -  13 : server : invalid DATA packet block number
+	  if(error == 13 && caller == 2){
+		  
+	  }
+	  //FROM CLIENT TO SERVER -  14 : client : invalid DATA packet length
+	  if(error == 14 && caller == 1){
+		  
+	  }
+	  //FROM SERVER TO CLIENT -  14 : client : invalid DATA packet length
+	  if(error == 14 && caller == 2){
+		  
+	  }
+	  //FROM CLIENT TO SERVER -  15 : client : invalid DATA packet block number
+	  if(error == 15 && caller == 1){
+		  
+	  }
+	  //FROM SERVER TO CLIENT -  15 : client : invalid DATA packet block number
+	  if(error == 15 && caller == 2){
+		  
+	  }
+	  //FROM CLIENT TO SERVER -  16 : server : ACK packet from invalid client
+	  if(error == 16 && caller == 1){
+		  
+	  }
+	  //FROM SERVER TO CLIENT -  16 : server : ACK packet from invalid client
+	  if(error == 16 && caller == 2){
+		  
+	  }
+	  //FROM CLIENT TO SERVER -  17 : cleint : ACK packet from invalid server
+	  if(error == 17 && caller == 1){
+		  
+	  }
+	  //FROM SERVER TO CLIENT -  17 : cleint : ACK packet from invalid server
+	  if(error == 17 && caller == 2){
+		  
+	  }
+	  //FROM CLIENT TO SERVER -  18 : server : DATA packet from invalid client
+	  if(error == 18 && caller == 1){
+		  
+	  }
+	  //FROM SERVER TO CLIENT -  18 : server : DATA packet from invalid client
+	  if(error == 18 && caller == 2){
+		  
+	  }
+	  //FROM CLIENT TO SERVER -  19 : client : DATA packet from invalid server
+	  if(error == 19 && caller == 1){
+		  
+	  }
+	  //FROM SERVER TO CLIENT -  19 : client : DATA packet from invalid server
+	  if(error == 19 && caller == 2){
 		  
 	  }
 	  
