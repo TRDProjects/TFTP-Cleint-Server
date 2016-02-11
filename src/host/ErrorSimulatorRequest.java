@@ -29,7 +29,11 @@ public class ErrorSimulatorRequest implements Runnable {
         }
   }
   
-  public void errorSim(){
+  public void errorSim(int caller, DatagramPacket data){
+	  
+	  // caller differentiates who's calling errorSim
+	  // 1 means its the client sending to server
+	  // 2 means its the server sending to client
 	  
 	  System.out.println("enter the error number of the error would you like to simulate /n");
 	  
@@ -69,7 +73,7 @@ public class ErrorSimulatorRequest implements Runnable {
 	  
 	  //get the requested error from the user
 	  int error =  Keyboard.getInteger();
-	  
+
 	  
 	  //make sure it's a valid entry
 	  while(error > 19 || error < 0){
@@ -78,10 +82,16 @@ public class ErrorSimulatorRequest implements Runnable {
 	  }
 	  
 	  /** ERROR HANDLING **/
-	  // do nothing
+	  // do nothing : client to server
 	  if(error == 0){
-		  
-	  }
+	      try {
+	          sendReceiveSocket.send(data);
+	        } catch (IOException e) {
+	           e.printStackTrace();
+	           System.exit(1);
+	        }	 
+	      }
+	  
 	  //1  : server : Invalid Request Packet TFTP opcode RRQ
 	  if(error == 1){
 		  
@@ -179,8 +189,6 @@ public class ErrorSimulatorRequest implements Runnable {
   @Override
   public void run() {
 	  
-	  errorSim();
-
       // Process the received datagram.
       printPacketInfo(requestPacket, PacketAction.RECEIVE);
       
@@ -220,7 +228,7 @@ public class ErrorSimulatorRequest implements Runnable {
       byte dataFromClient[] = new byte[516];
       receivePacketClient = new DatagramPacket(dataFromClient, dataFromClient.length);
       System.out.println("Error Simulator: waiting for Packet.\n");
-
+      
       // Block until a datagram packet is received from the receive socket
       try {        
           System.out.println("Waiting...");
@@ -242,9 +250,11 @@ public class ErrorSimulatorRequest implements Runnable {
       printPacketInfo(sendPacketServer, PacketAction.SEND);
           
       // Send the datagram packet to the server via the send/receive socket. 
+      //sends the datagram packet to the errorSim which will either alter it, or not, and send it on to the server
       try {
-         sendReceiveSocket.send(sendPacketServer);
-      } catch (IOException e) {
+    	 errorSim(1, sendPacketServer);
+      // sendReceiveSocket.send(sendPacketServer);
+      } catch (Exception e) {
          e.printStackTrace();
          System.exit(1);
       }
@@ -282,9 +292,11 @@ public class ErrorSimulatorRequest implements Runnable {
     
         
       // Send the datagram packet to the Client
+      //sends the datagram packet to the errorSim which will either alter it, or not, and send it on to the client
       try {
-        sendReceiveSocket.send(sendPacketClient);
-      } catch (IOException e) {
+    	errorSim(2, sendPacketClient);
+        //sendReceiveSocket.send(sendPacketClient);
+      } catch (Exception e) {
          e.printStackTrace();
          System.exit(1);
       }
