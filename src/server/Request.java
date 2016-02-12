@@ -269,6 +269,22 @@ public class Request implements Runnable {
 	}
 	
 	
+	private boolean packetContainsErrorThatRequiresThreadInterruption(DatagramPacket packet) {
+		byte[] data = packet.getData();
+		
+		// Check if the packet is an error packet to begin with
+		if (data[0] == 0 && data[1] == PacketType.ERROR.getOpcode()) {
+			
+			// Check if the error is an illegal TFTP operation
+			if (data[2] == 0 && data[3] == ErrorType.ILLEGAL_TFTP_OPERATION.getErrorCode()) {
+				return true;
+			}
+			
+		}
+		
+		return false;
+	}
+	
 	private void validateAckPacket(DatagramPacket packet, byte[] expectedBlockNumber) 
 			throws IllegalTftpOperationException, UnknownTransferIdException {
 		
@@ -359,6 +375,14 @@ public class Request implements Runnable {
 	    	        e.printStackTrace();
 	    	        System.exit(1);
 	    	    }
+	    	    
+	    	    
+			    // Check if the packet received is an error which requires thread interruption
+			    if (packetContainsErrorThatRequiresThreadInterruption(receivePacket)) {
+			    	System.out.print("\nReceived error packet that requires thread interruption. CLosing thread...");
+			    	Thread.currentThread().interrupt();
+			    	return;
+			    }
 	    	
 	    	    printPacketInfo(receivePacket, PacketAction.RECEIVE);
 	    	    
@@ -499,6 +523,14 @@ public class Request implements Runnable {
 			        System.out.println("Receive Socket Timed Out.\n" + e);
 			        e.printStackTrace();
 			        System.exit(1);
+			    }
+			    
+			    
+			    // Check if the packet received is an error which requires thread interruption
+			    if (packetContainsErrorThatRequiresThreadInterruption(receivePacket)) {
+			    	System.out.print("\nReceived error packet that requires thread interruption. CLosing thread...");
+			    	Thread.currentThread().interrupt();
+			    	return;
 			    }
 			    
 			    // Process the packet received

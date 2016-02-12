@@ -30,7 +30,7 @@ public class ErrorSimulatorRequest implements Runnable {
   }
   
   
-  private void modifyRequestPacketUi(DatagramPacket data) {
+  private void modifyRequestPacketUi(DatagramPacket packet) {
 	  System.out.println("\n------------- Request Packet Modification Menu ----------------");
 	  System.out.println("Enter the error number of the error would you like to simulate: \n");
 	  
@@ -54,24 +54,77 @@ public class ErrorSimulatorRequest implements Runnable {
 	  }
 	  
 	  
-     if (error == 1) {
-		  // TODO Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 01 or 02)
-		  // TODO Then call method that modifies the packet
+	  if (error == 1) {
+		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 01 or 02)
+		  //Then modify the packet
+		  System.out.println("Enter desired opcode (2 digits).\n");
+   	 
+		  //Get requested new opcode from user
+		  int opcode = Keyboard.getInteger();
+   	 
+		  while(opcode > 99 || opcode < 10 ){
+    		 System.out.println("opcode must be 2 digits");
+    		 opcode = Keyboard.getInteger();
+		  }
+   	 
+		  changePacketOpcode(packet, opcode);	  
 		  
 	  } else if (error == 2) {
-		  // TODO call method that removes file name from the packet
+		  //remove file name from the packet
 		  
+		  byte[] pData = new byte[packet.getLength()];
+		  System.arraycopy(packet.getData(), packet.getOffset(), pData, 0, packet.getLength());
+		  
+		  int fileNameSize = 0;
+		  
+		  for (int i = 2; pData[i] != 0; i++){
+			  fileNameSize++;
+		  }
+		  
+		  byte[] newData = new byte[pData.length - fileNameSize];
+		  newData[0] = pData[0];
+		  newData[1] = pData[1];
+		  
+		  System.arraycopy(pData, fileNameSize + 2, newData, 2, pData.length - fileNameSize - 2);
+		  
+		  packet.setData(newData);
+		  
+		
 	  } else if (error == 3) {
-		// TODO call method that removes mode from the packet
+		//remove mode from the packet
 		  
+		  changePacketMode(packet, "");
+		  
+
 	  } else if (error == 4) {
-		// TODO get input from the user of the mode they would like to use
-		// TODO call method that changes the mode to what the user passed in
+		//get input from the user of the mode they would like to use
+		//then call method that changes the mode to what the user passed in
+		  
+		  System.out.println("Enter desired mode.");
+		  
+		  //Get new mode from user
+		  String mode = Keyboard.getString();
+		  
+		  changePacketMode(packet, mode);
+		  
 		  
 	  } else if (error == 5) {
 		  try {
-			  if (getPacketType(data).equals(ErrorSimulator.PacketType.WRITE)) {
-				  // TODO call method that sends the WRQ packet to the server
+			  if (getPacketType(packet).equals(ErrorSimulator.PacketType.WRITE)) {
+				  System.out.println("\nSending duplicate WRQ packets: \n");
+				  
+			      // Process the packet to send
+			      printPacketInfo(packet, PacketAction.SEND);
+			      
+			      // Send the datagram packet to the server via the send/receive socket.
+				  // Note that here we send the WRQ packet once but once this method returns, 
+				  // the same packet will be sent again
+			      try {
+			         sendReceiveSocket.send(packet);
+			      } catch (IOException e) {
+			         e.printStackTrace();
+			         System.exit(1);
+			      }
 			  } else {
 				  System.out.println("Error: packet is not a WRQ.");
 			  }
@@ -86,7 +139,7 @@ public class ErrorSimulatorRequest implements Runnable {
   }
   
   
-  private void modifyAckPacketUi(DatagramPacket data) {
+  private void modifyAckPacketUi(DatagramPacket packet) {
 	  System.out.println("\n------------- ACK Packet Modification Menu ----------------");
 	  System.out.println("Enter the error number of the error would you like to simulate: \n");
 	  
@@ -109,15 +162,37 @@ public class ErrorSimulatorRequest implements Runnable {
 	  
 	  
      if (error == 1) {
-		  // TODO Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 04)
-		  // TODO Then call method that modifies the packet
+		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 04)
+		  //Then modify the packet
+		  System.out.println("Enter desired opcode (2 digits).\n");
+  	 
+		  //Get requested new opcode from user
+		  int opcode = Keyboard.getInteger();
+  	 
+		  while(opcode > 99 || opcode < 10 ){
+			  System.out.println("opcode must be 2 digits\n");
+			  opcode = Keyboard.getInteger();
+		  }
+  	 
+		  changePacketOpcode(packet, opcode);	  
 		  
 	  } else if (error == 2) {
 		  // TODO call method that changes the host of the packet
 		  
 	  } else if (error == 3) {
-		// TODO get input from the user of the block number they would like to use
-		// TODO then call method that changes the block number to what the user passed in
+		//get input from the user of the block number they would like to use
+		//then call method that changes the block number to what the user passed in
+		  System.out.println("Enter desired block number (2 digits).\n");
+		  
+		  //Get requested new block number
+		  int bNumber = Keyboard.getInteger();
+		  
+		  while(bNumber > 99 || bNumber < 10){
+			  System.out.println("block number must be 2 digits\n");
+			  bNumber = Keyboard.getInteger();
+		  }
+		  
+		  changeBlockNumber(packet, bNumber);
 		  
 	  } else {
 		  // Do not modify packet
@@ -126,7 +201,7 @@ public class ErrorSimulatorRequest implements Runnable {
   }
   
   
-  private void modifyDataPacketUi(DatagramPacket data) {
+  private void modifyDataPacketUi(DatagramPacket packet) {
 	  System.out.println("\n------------- DATA Packet Modification Menu ----------------");
 	  System.out.println("Enter the error number of the error would you like to simulate: \n");
 	  
@@ -150,23 +225,97 @@ public class ErrorSimulatorRequest implements Runnable {
 	  
 	  
      if (error == 1) {
-		  // TODO Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 03)
-		  // TODO Then call method that modifies the packet
+		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 03)
+		  //Then modify the packet
+		  System.out.println("Enter desired opcode (2 digits).\n");
+ 	 
+		  //Get requested new opcode from user
+		  int opcode = Keyboard.getInteger();
+ 	 
+		  while(opcode > 99 || opcode < 10 ){
+			  System.out.println("opcode must be 2 digits");
+			  opcode = Keyboard.getInteger();
+		  }
+ 	 
+		  changePacketOpcode(packet, opcode);	  
 		  
 	  } else if (error == 2) {
 		  // TODO call method that changes the host of the packet
 
 	  } else if (error == 3) {
-		  // TODO get input from the user of the block number they would like to use
-		  // TODO then call method that changes the block number to what the user passed in
+			//get input from the user of the block number they would like to use
+			//then call method that changes the block number to what the user passed in
+			  System.out.println("Enter desired block number (2 digits).\n");
+			  
+			  //Get requested new block number
+			  int bNumber = Keyboard.getInteger();
+			  
+			  while(bNumber > 99 || bNumber < 10){
+				  System.out.println("block number must be 2 digits\n");
+				  bNumber = Keyboard.getInteger();
+			  }
+			  
+			  changeBlockNumber(packet, bNumber);
 		  
 	  } else if (error == 4) {
-		  // TODO call method that adds junk data to the original packet until the packet is 517 bytes long
-			    
+		  // Add junk data to the original packet until the packet is 517 bytes long
+		  byte[] newData = new byte[517];
+		  System.arraycopy(packet.getData(), packet.getOffset(), newData, 0, packet.getLength());
+		  
+		  int i = newData.length - 1;
+		  while (i >= 0 && newData[i] == 0) {
+			  newData[i] = (byte) 82;
+			  i--;
+		  }
+		  
+		  packet.setData(newData);
+		  System.out.println(Integer.toString(packet.getLength()));
 	  } else {
 		  // Do not modify packet
 		  return;
 	  }
+  }
+  
+  private void changePacketOpcode(DatagramPacket data, int newOpCode){
+	  byte[] pData = new byte[data.getLength()];
+	  System.arraycopy(data.getData(), data.getOffset(), pData, 0, data.getLength());
+	 
+	  pData[0] = (byte)Integer.parseInt(Integer.toString(newOpCode).substring(0,1));
+	  pData[1] = (byte)Integer.parseInt(Integer.toString(newOpCode).substring(1, 2));
+	 
+	  data.setData(pData);
+  }
+  
+  private void changePacketMode(DatagramPacket data, String newMode){
+	  byte[] pData = new byte[data.getLength()];
+	  System.arraycopy(data.getData(), data.getOffset(), pData, 0, data.getLength());
+	  
+	  byte[] bArray = newMode.getBytes();
+	  
+	  int modeSize = 0;
+	  
+	  for (int i = pData.length - 2; pData[i] != 0; i--){
+		  modeSize++;
+	  }
+	  
+	  byte[] newData = new byte[pData.length - modeSize + bArray.length];
+	  
+	  System.arraycopy(pData, 0, newData, 0, pData.length - modeSize - 1);
+	  System.arraycopy(bArray, 0, newData, pData.length - modeSize - 1, bArray.length);
+	  
+	  data.setData(newData);
+	    
+  }
+  
+  private void changeBlockNumber(DatagramPacket data, int bNumber){
+	  byte[] pData = new byte[data.getLength()];
+	  System.arraycopy(data.getData(), data.getOffset(), pData, 0, data.getLength());
+	  
+	  pData[2] = (byte)Integer.parseInt(Integer.toString(bNumber).substring(0,1));
+	  pData[3] = (byte)Integer.parseInt(Integer.toString(bNumber).substring(1, 2));
+	  
+	  data.setData(pData);
+	  
   }
   
   
