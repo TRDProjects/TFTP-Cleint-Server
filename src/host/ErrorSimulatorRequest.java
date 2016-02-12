@@ -40,6 +40,7 @@ public class ErrorSimulatorRequest implements Runnable {
 	  System.out.println("2 : Empty filename");
 	  System.out.println("3 : Empty mode");
 	  System.out.println("4 : Invalid mode");
+	  System.out.println("5 : Duplicate WRQ packet (write request packet");
 	  System.out.println("---------------------------------------------------------------\n");
 	  
 	  // Get the requested error from the user
@@ -47,7 +48,7 @@ public class ErrorSimulatorRequest implements Runnable {
 
 	  
 	  // Make sure it's a valid entry
-	  while(error > 4  || error < 0){
+	  while(error > 5  || error < 0){
 		  System.out.println("try again");
 		  error = Keyboard.getInteger();
 	  }
@@ -67,6 +68,17 @@ public class ErrorSimulatorRequest implements Runnable {
 		// TODO get input from the user of the mode they would like to use
 		// TODO call method that changes the mode to what the user passed in
 		  
+	  } else if (error == 5) {
+		  try {
+			  if (getPacketType(data).equals(ErrorSimulator.PacketType.WRITE)) {
+				  // TODO call method that sends the WRQ packet to the server
+			  } else {
+				  System.out.println("Error: packet is not a WRQ.");
+			  }
+		  } catch (InvalidPacketTypeException e) {
+			  System.out.println("Error: packet is not a WRQ.");
+		  }
+				    
 	  } else {
 		  // Do not modify packet
 		  return;
