@@ -226,6 +226,20 @@ public class Request implements Runnable {
 		return data;
 	}
 	
+	private void removeTrailingZeroBytesFromDataPacket(DatagramPacket packet) {
+		byte[] data = packet.getData();
+		
+		// Make sure it's a DATA packet
+		if (data[0] == 0 && data[1] == PacketType.DATA.getOpcode()) {
+			// Remove trailing 0 bytes from data
+		    int i = data.length - 1;
+			while (i >= 0 && data[i] == 0) {
+				i--;
+		    }
+			packet.setData(Arrays.copyOf(data, i + 1));
+			
+		}
+	}
 	
 	private DatagramPacket formDataPacket(InetAddress address, int port, byte[] data, int dataLength, byte[] blockNumber) {
 		byte[] dataPacket = new byte [4 + data.length];
@@ -317,7 +331,7 @@ public class Request implements Runnable {
 	        			dataFromFile, n, 
 	        			blockNumber);
 	        
-	        	
+	        	removeTrailingZeroBytesFromDataPacket(sendDataPacket);
 	    	    printPacketInfo(sendDataPacket, PacketAction.SEND);
 	    	    
 
@@ -329,7 +343,7 @@ public class Request implements Runnable {
 	    	        System.exit(1);
 	    	    }
 	    	
-	    	    System.out.println("Client: Packet sent.\n");
+	    	    System.out.println("Server: Packet sent.\n");
 	    	    
 	    	    // Wait to receive an ACK
 	    	    
@@ -423,7 +437,7 @@ public class Request implements Runnable {
 	        System.exit(1);
     	}
     	
-    	System.out.println("Server (" + Thread.currentThread() + "): Finished reading file");
+    	System.out.println("\n Server (" + Thread.currentThread() + "): Finished reading file");
     	
 	    sendReceiveSocket.close();
 	    
@@ -488,6 +502,7 @@ public class Request implements Runnable {
 			    }
 			    
 			    // Process the packet received
+			    removeTrailingZeroBytesFromDataPacket(receivePacket);
 			    printPacketInfo(receivePacket, PacketAction.RECEIVE);
 			    
 			    
@@ -567,7 +582,7 @@ public class Request implements Runnable {
 
 		
 	    
-	    System.out.println("Server (" + Thread.currentThread() + "): Finished writing file");
+	    System.out.println("\n Server (" + Thread.currentThread() + "): Finished writing file");
 	    
 	    
 	    sendReceiveSocket.close();

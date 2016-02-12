@@ -137,6 +137,21 @@ public class Client {
 		return data;
 	}
 	
+	private void removeTrailingZeroBytesFromDataPacket(DatagramPacket packet) {
+		byte[] data = packet.getData();
+		
+		// Make sure it's a DATA packet
+		if (data[0] == 0 && data[1] == PacketType.DATA.getOpcode()) {
+			// Remove trailing 0 bytes from data
+		    int i = data.length - 1;
+			while (i >= 0 && data[i] == 0) {
+				i--;
+		    }
+			packet.setData(Arrays.copyOf(data, i + 1));
+			
+		}
+	}
+	
 	
 	private void sendFile(DatagramPacket packet, String fileName) {
 	    // Send data to be written to server
@@ -156,6 +171,7 @@ public class Client {
 	        			blockNumber);
 	        
 	        	
+	        	removeTrailingZeroBytesFromDataPacket(sendDataPacket);
 	    	    printPacketInfo(sendDataPacket, PacketAction.SEND);
 	    	    
 
@@ -249,6 +265,7 @@ public class Client {
 		    }
 		    
 		    // Process the packet received
+		    removeTrailingZeroBytesFromDataPacket(receivePacket);
 		    printPacketInfo(receivePacket, PacketAction.RECEIVE);
 		    
 		    // Update the length of the file data
@@ -258,7 +275,7 @@ public class Client {
 	    } while(dataLength == 512);
 
 	    
-	    System.out.println("Client (" + Thread.currentThread() + "): Finished receiving file");
+	    System.out.println("\n Client (" + Thread.currentThread() + "): Finished receiving file");
 	    
 	}
 	
@@ -330,7 +347,7 @@ public class Client {
 	    System.out.println("Client: Packet sent.\n");
 	
 	    // Construct a DatagramPacket for receiving packets
-	    byte data[] = new byte[100];
+	    byte data[] = new byte[517];
 	    receivePacket = new DatagramPacket(data, data.length);
 	
 	    try {
@@ -362,7 +379,7 @@ public class Client {
 	
 	public static void main(String args[]) {
 		
-		Client newClient = new Client(Mode.TEST);
+		Client newClient = new Client(Mode.NORMAL);
 		
 		
 		while(true) {
