@@ -82,8 +82,7 @@ public class ErrorSimulatorRequest implements Runnable {
 	  
 	  System.out.println("1 : Invalid ACK packet TFTP opcode");
 	  System.out.println("2 : Invalid host (change to different host)");
-	  System.out.println("3 : Invalid port (change to different port)");
-	  System.out.println("4 : Invalid block number");
+	  System.out.println("3 : Invalid block number");
 	  System.out.println("---------------------------------------------------------------\n");
 	  
 	  // Get the requested error from the user
@@ -91,7 +90,7 @@ public class ErrorSimulatorRequest implements Runnable {
 
 	  
 	  // Make sure it's a valid entry
-	  while(error > 4 || error < 0){
+	  while(error > 3 || error < 0){
 		  System.out.println("try again");
 		  error = Keyboard.getInteger();
 	  }
@@ -105,9 +104,6 @@ public class ErrorSimulatorRequest implements Runnable {
 		  // TODO call method that changes the host of the packet
 		  
 	  } else if (error == 3) {
-		// TODO call method that changes the port of the packet
-		  
-	  } else if (error == 4) {
 		// TODO get input from the user of the block number they would like to use
 		// TODO then call method that changes the block number to what the user passed in
 		  
@@ -126,8 +122,7 @@ public class ErrorSimulatorRequest implements Runnable {
 	  
 	  System.out.println("1 : Invalid DATA packet TFTP opcode");
 	  System.out.println("2 : Invalid host (change to different host)");
-	  System.out.println("3 : Invalid port (change to different port)");
-	  System.out.println("4 : Invalid block number");
+	  System.out.println("3 : Invalid block number");
 	  System.out.println("4 : Large DATA packet (larger than 516 bytes)");
 	  System.out.println("---------------------------------------------------------------\n");
 	  
@@ -136,7 +131,7 @@ public class ErrorSimulatorRequest implements Runnable {
 
 	  
 	  // Make sure it's a valid entry
-	  while(error > 5 || error < 0){
+	  while(error > 4 || error < 0){
 		  System.out.println("try again");
 		  error = Keyboard.getInteger();
 	  }
@@ -148,15 +143,12 @@ public class ErrorSimulatorRequest implements Runnable {
 		  
 	  } else if (error == 2) {
 		  // TODO call method that changes the host of the packet
-		  
+
 	  } else if (error == 3) {
-		  // TODO call method that changes the port of the packet
-		  
-	  } else if (error == 4) {
 		  // TODO get input from the user of the block number they would like to use
 		  // TODO then call method that changes the block number to what the user passed in
 		  
-	  } else if (error == 5) {
+	  } else if (error == 4) {
 		  // TODO call method that adds junk data to the original packet until the packet is 517 bytes long
 			    
 	  } else {
