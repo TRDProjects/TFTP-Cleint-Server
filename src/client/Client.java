@@ -379,7 +379,7 @@ public class Client {
 	
 	public static void main(String args[]) {
 		
-		Client newClient = new Client(Mode.NORMAL);
+		Client newClient = new Client(Mode.TEST);
 		
 		
 		while(true) {
