@@ -180,19 +180,29 @@ public class ErrorSimulatorRequest implements Runnable {
 		  // TODO call method that changes the host of the packet
 		  
 	  } else if (error == 3) {
-		//get input from the user of the block number they would like to use
-		//then call method that changes the block number to what the user passed in
-		  System.out.println("Enter desired block number (2 digits).\n");
-		  
-		  //Get requested new block number
-		  int bNumber = Keyboard.getInteger();
-		  
-		  while(bNumber > 99 || bNumber < 10){
-			  System.out.println("block number must be 2 digits\n");
-			  bNumber = Keyboard.getInteger();
-		  }
-		  
-		  changeBlockNumber(packet, bNumber);
+			//get input from the user of the block number they would like to use
+			//then call method that changes the block number to what the user passed in
+			  System.out.println("Enter first digit of desired block number: \n");
+			  
+			  //Get first digit of requested new block number
+			  int firstBlockNumber = Keyboard.getInteger();
+			  
+			  while(firstBlockNumber > 9 || firstBlockNumber < 0){
+				  System.out.println("Must be between 0 and 9\n");
+				  firstBlockNumber = Keyboard.getInteger();
+			  }
+			  
+			  System.out.println("Enter second digit of desired block number: \n");
+			  
+			  //Get second digit of requested new block number
+			  int secondBlockNumber = Keyboard.getInteger();
+			  
+			  while(secondBlockNumber > 9 || secondBlockNumber < 0){
+				  System.out.println("Must be between 0 and 9\n");
+				  secondBlockNumber = Keyboard.getInteger();
+			  }
+			  
+			  changeBlockNumber(packet, firstBlockNumber, secondBlockNumber);
 		  
 	  } else {
 		  // Do not modify packet
@@ -245,17 +255,27 @@ public class ErrorSimulatorRequest implements Runnable {
 	  } else if (error == 3) {
 			//get input from the user of the block number they would like to use
 			//then call method that changes the block number to what the user passed in
-			  System.out.println("Enter desired block number (2 digits).\n");
+			  System.out.println("Enter first digit of desired block number: \n");
 			  
-			  //Get requested new block number
-			  int bNumber = Keyboard.getInteger();
+			  //Get first digit of requested new block number
+			  int firstBlockNumber = Keyboard.getInteger();
 			  
-			  while(bNumber > 99 || bNumber < 10){
-				  System.out.println("block number must be 2 digits\n");
-				  bNumber = Keyboard.getInteger();
+			  while(firstBlockNumber > 9 || firstBlockNumber < 0){
+				  System.out.println("Must be between 0 and 9\n");
+				  firstBlockNumber = Keyboard.getInteger();
 			  }
 			  
-			  changeBlockNumber(packet, bNumber);
+			  System.out.println("Enter second digit of desired block number: \n");
+			  
+			  //Get second digit of requested new block number
+			  int secondBlockNumber = Keyboard.getInteger();
+			  
+			  while(secondBlockNumber > 9 || secondBlockNumber < 0){
+				  System.out.println("Must be between 0 and 9\n");
+				  secondBlockNumber = Keyboard.getInteger();
+			  }
+			  
+			  changeBlockNumber(packet, firstBlockNumber, secondBlockNumber);
 		  
 	  } else if (error == 4) {
 		  // Add junk data to the original packet until the packet is 517 bytes long
@@ -307,12 +327,12 @@ public class ErrorSimulatorRequest implements Runnable {
 	    
   }
   
-  private void changeBlockNumber(DatagramPacket data, int bNumber){
+  private void changeBlockNumber(DatagramPacket data, int firstBlockNumber, int secondBlockNumber){
 	  byte[] pData = new byte[data.getLength()];
 	  System.arraycopy(data.getData(), data.getOffset(), pData, 0, data.getLength());
 	  
-	  pData[2] = (byte)Integer.parseInt(Integer.toString(bNumber).substring(0,1));
-	  pData[3] = (byte)Integer.parseInt(Integer.toString(bNumber).substring(1, 2));
+	  pData[2] = (byte) firstBlockNumber;
+	  pData[3] = (byte) secondBlockNumber;
 	  
 	  data.setData(pData);
 	  

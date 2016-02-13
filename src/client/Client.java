@@ -571,19 +571,20 @@ public class Client {
 	        e.printStackTrace();
 	        System.exit(1);
 	    }
-	
-	    //printPacketInfo(receivePacket, PacketAction.RECEIVE);
-	    
-	    
+
+	        
 	    byte[] dataRec = receivePacket.getData();
 	    
-	    if (dataRec[0] == 0 && dataRec[1] == 4 && dataRec[2] == 0 && dataRec[3] == 0) {
+	    if (dataRec[0] == 0 && dataRec[1] == PacketType.ACK.getOpcode()) {
 	    	System.out.println("Sending file....");
 	    	sendFile(receivePacket, fileName);
 	    	
-	    } else if (dataRec[0] == 0 && dataRec[1] == 3 && dataRec[2] == 0 && dataRec[3] == 1) {
+	    } else if (dataRec[0] == 0 && dataRec[1] == PacketType.DATA.getOpcode()) {
 	    	System.out.println("Receiving file....");
 	    	receiveFile(receivePacket, fileName);
+	    	
+	    } else {
+	    	printPacketInfo(receivePacket, PacketAction.RECEIVE);
 	    }
 
 		
