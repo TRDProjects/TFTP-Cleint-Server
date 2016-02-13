@@ -256,6 +256,8 @@ public class Client {
 	private void sendFile(DatagramPacket packet, String fileName) {
 		int connectionPort = packet.getPort();
 		
+		printPacketInfo(packet, PacketAction.RECEIVE);
+		
 	    // Send data to be written to server
     	try {
         	BufferedInputStream in = new BufferedInputStream(new FileInputStream("src/client/files/" + fileName));
@@ -289,6 +291,7 @@ public class Client {
 	    	    
 	    	    // Wait to receive an ACK
 	    	    
+	    	    
 	    	    do {
 		    	    // Construct a DatagramPacket for receiving the ACK packet
 		    	    // Note that an ACK packet should be 4 bytes long but we create a larger buffer for error checking purposes
@@ -304,6 +307,8 @@ public class Client {
 		    	    }
 		    	
 		    	    printPacketInfo(receivePacket, PacketAction.RECEIVE);
+		    	    
+		    	    System.out.println("PACKET PORT: " + receivePacket.getPort());
 		    	    
 		    	    if (receivePacket.getPort() != connectionPort) {
 		    	    	System.out.println("Received WRQ ACK packet from another port");

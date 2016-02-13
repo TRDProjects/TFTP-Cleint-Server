@@ -57,17 +57,27 @@ public class ErrorSimulatorRequest implements Runnable {
 	  if (error == 1) {
 		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 01 or 02)
 		  //Then modify the packet
-		  System.out.println("Enter desired opcode (2 digits).\n");
-   	 
-		  //Get requested new opcode from user
-		  int opcode = Keyboard.getInteger();
-   	 
-		  while(opcode > 99 || opcode < 10 ){
-    		 System.out.println("opcode must be 2 digits");
-    		 opcode = Keyboard.getInteger();
-		  }
-   	 
-		  changePacketOpcode(packet, opcode);	  
+	    	 System.out.println("Enter first digit of desired opcode: \n");
+	      	 
+			  //Get requested first digit of opcode
+			  int firstOpcode = Keyboard.getInteger();
+	  	 
+			  while(firstOpcode > 9 || firstOpcode < 0 ){
+				  System.out.println("must be between 0 and 9\n");
+				  firstOpcode = Keyboard.getInteger();
+			  }
+			  
+	    	 System.out.println("Enter second digit of desired opcode: \n");
+	      	 
+			  //Get requested second digit of opcode
+			  int secondOpcode = Keyboard.getInteger();
+	  	 
+			  while(secondOpcode > 9 || secondOpcode < 0 ){
+				  System.out.println("must be between 0 and 9\n");
+				  secondOpcode = Keyboard.getInteger();
+			  }
+	  	 
+			  changePacketOpcode(packet, firstOpcode, secondOpcode);	
 		  
 	  } else if (error == 2) {
 		  //remove file name from the packet
@@ -163,17 +173,27 @@ public class ErrorSimulatorRequest implements Runnable {
      if (error == 1) {
 		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 04)
 		  //Then modify the packet
-		  System.out.println("Enter desired opcode (2 digits).\n");
+    	 System.out.println("Enter first digit of desired opcode: \n");
   	 
-		  //Get requested new opcode from user
-		  int opcode = Keyboard.getInteger();
+		  //Get requested first digit of opcode
+		  int firstOpcode = Keyboard.getInteger();
   	 
-		  while(opcode > 99 || opcode < 10 ){
-			  System.out.println("opcode must be 2 digits\n");
-			  opcode = Keyboard.getInteger();
+		  while(firstOpcode > 9 || firstOpcode < 0 ){
+			  System.out.println("must be between 0 and 9\n");
+			  firstOpcode = Keyboard.getInteger();
+		  }
+		  
+    	 System.out.println("Enter second digit of desired opcode: \n");
+      	 
+		  //Get requested second digit of opcode
+		  int secondOpcode = Keyboard.getInteger();
+  	 
+		  while(secondOpcode > 9 || secondOpcode < 0 ){
+			  System.out.println("must be between 0 and 9\n");
+			  secondOpcode = Keyboard.getInteger();
 		  }
   	 
-		  changePacketOpcode(packet, opcode);	  	  
+		  changePacketOpcode(packet, firstOpcode, secondOpcode);	  	  
 		  
 	  } else if (error == 3) {
 			//get input from the user of the block number they would like to use
@@ -232,17 +252,27 @@ public class ErrorSimulatorRequest implements Runnable {
      if (error == 1) {
 		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 03)
 		  //Then modify the packet
-		  System.out.println("Enter desired opcode (2 digits).\n");
- 	 
-		  //Get requested new opcode from user
-		  int opcode = Keyboard.getInteger();
- 	 
-		  while(opcode > 99 || opcode < 10 ){
-			  System.out.println("opcode must be 2 digits");
-			  opcode = Keyboard.getInteger();
+    	 System.out.println("Enter first digit of desired opcode: \n");
+      	 
+		  //Get requested first digit of opcode
+		  int firstOpcode = Keyboard.getInteger();
+  	 
+		  while(firstOpcode > 9 || firstOpcode < 0 ){
+			  System.out.println("must be between 0 and 9\n");
+			  firstOpcode = Keyboard.getInteger();
 		  }
- 	 
-		  changePacketOpcode(packet, opcode);	  
+		  
+    	 System.out.println("Enter second digit of desired opcode: \n");
+      	 
+		  //Get requested second digit of opcode
+		  int secondOpcode = Keyboard.getInteger();
+  	 
+		  while(secondOpcode > 9 || secondOpcode < 0 ){
+			  System.out.println("must be between 0 and 9\n");
+			  secondOpcode = Keyboard.getInteger();
+		  }
+  	 
+		  changePacketOpcode(packet, firstOpcode, secondOpcode);	
 		  
 	  } else if (error == 2) {
 			//get input from the user of the block number they would like to use
@@ -288,12 +318,12 @@ public class ErrorSimulatorRequest implements Runnable {
 	  }
   }
   
-  private void changePacketOpcode(DatagramPacket data, int newOpCode){
+  private void changePacketOpcode(DatagramPacket data, int firstOpcodeDigit, int secondOpcodeDigit){
 	  byte[] pData = new byte[data.getLength()];
 	  System.arraycopy(data.getData(), data.getOffset(), pData, 0, data.getLength());
 	 
-	  pData[0] = (byte)Integer.parseInt(Integer.toString(newOpCode).substring(0,1));
-	  pData[1] = (byte)Integer.parseInt(Integer.toString(newOpCode).substring(1, 2));
+	  pData[0] = (byte) firstOpcodeDigit;
+	  pData[1] = (byte) secondOpcodeDigit;
 	 
 	  data.setData(pData);
   }
