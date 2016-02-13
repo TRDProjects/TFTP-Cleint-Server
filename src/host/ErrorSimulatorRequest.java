@@ -146,8 +146,7 @@ public class ErrorSimulatorRequest implements Runnable {
 	  System.out.println("0 : No error (i.e do not modify the packet)");
 	  
 	  System.out.println("1 : Invalid ACK packet TFTP opcode");
-	  System.out.println("2 : Invalid host (change to different host)");
-	  System.out.println("3 : Invalid block number");
+	  System.out.println("2 : Invalid block number");
 	  System.out.println("---------------------------------------------------------------\n");
 	  
 	  // Get the requested error from the user
@@ -155,7 +154,7 @@ public class ErrorSimulatorRequest implements Runnable {
 
 	  
 	  // Make sure it's a valid entry
-	  while(error > 3 || error < 0){
+	  while(error > 2 || error < 0){
 		  System.out.println("try again");
 		  error = Keyboard.getInteger();
 	  }
@@ -174,10 +173,7 @@ public class ErrorSimulatorRequest implements Runnable {
 			  opcode = Keyboard.getInteger();
 		  }
   	 
-		  changePacketOpcode(packet, opcode);	  
-		  
-	  } else if (error == 2) {
-		  // TODO call method that changes the host of the packet
+		  changePacketOpcode(packet, opcode);	  	  
 		  
 	  } else if (error == 3) {
 			//get input from the user of the block number they would like to use
@@ -218,9 +214,8 @@ public class ErrorSimulatorRequest implements Runnable {
 	  System.out.println("0 : No error (i.e do not modify the packet)");
 	  
 	  System.out.println("1 : Invalid DATA packet TFTP opcode");
-	  System.out.println("2 : Invalid host (change to different host)");
-	  System.out.println("3 : Invalid block number");
-	  System.out.println("4 : Large DATA packet (larger than 516 bytes)");
+	  System.out.println("2 : Invalid block number");
+	  System.out.println("3 : Large DATA packet (larger than 516 bytes)");
 	  System.out.println("---------------------------------------------------------------\n");
 	  
 	  // Get the requested error from the user
@@ -228,7 +223,7 @@ public class ErrorSimulatorRequest implements Runnable {
 
 	  
 	  // Make sure it's a valid entry
-	  while(error > 4 || error < 0){
+	  while(error > 3 || error < 0){
 		  System.out.println("try again");
 		  error = Keyboard.getInteger();
 	  }
@@ -250,9 +245,6 @@ public class ErrorSimulatorRequest implements Runnable {
 		  changePacketOpcode(packet, opcode);	  
 		  
 	  } else if (error == 2) {
-		  // TODO call method that changes the host of the packet
-
-	  } else if (error == 3) {
 			//get input from the user of the block number they would like to use
 			//then call method that changes the block number to what the user passed in
 			  System.out.println("Enter first digit of desired block number: \n");
@@ -277,7 +269,7 @@ public class ErrorSimulatorRequest implements Runnable {
 			  
 			  changeBlockNumber(packet, firstBlockNumber, secondBlockNumber);
 		  
-	  } else if (error == 4) {
+	  } else if (error == 3) {
 		  // Add junk data to the original packet until the packet is 517 bytes long
 		  byte[] newData = new byte[517];
 		  System.arraycopy(packet.getData(), packet.getOffset(), newData, 0, packet.getLength());

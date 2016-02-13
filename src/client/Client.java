@@ -253,7 +253,19 @@ public class Client {
 	}
 	
 	
+	private boolean isInitialAckPacket(DatagramPacket packet) {
+		byte[] data = packet.getData();
+		
+		if (data[0] == 0 && data[1] == PacketType.ACK.getOpcode() && data[2] == 0 && data[3] == 0) {
+			return true;
+		}
+		
+		return false;
+	}
+	
 	private void sendFile(DatagramPacket packet, String fileName) {
+		int connectionPort = packet.getPort();
+		
 	    // Send data to be written to server
     	try {
         	BufferedInputStream in = new BufferedInputStream(new FileInputStream("src/client/files/" + fileName));
@@ -287,19 +299,48 @@ public class Client {
 	    	    
 	    	    // Wait to receive an ACK
 	    	    
-	    	    // Construct a DatagramPacket for receiving packets
-	    	    byte dataForAck[] = new byte[4];
-	    	    receivePacket = new DatagramPacket(dataForAck, dataForAck.length);
-	    	
-	    	    try {
-	    	        // Block until a datagram is received via the send/receive socket.  
-	    	        sendReceiveSocket.receive(receivePacket);
-	    	    } catch(IOException e) {
-	    	        e.printStackTrace();
-	    	        System.exit(1);
-	    	    }
-	    	
-	    	    printPacketInfo(receivePacket, PacketAction.RECEIVE);
+	    	    do {
+		    	    // Construct a DatagramPacket for receiving the ACK packet
+		    	    // Note that an ACK packet should be 4 bytes long but we create a larger buffer for error checking purposes
+		    	    byte dataForAck[] = new byte[5];
+		    	    receivePacket = new DatagramPacket(dataForAck, dataForAck.length);
+		    	
+		    	    try {
+		    	        // Block until a datagram is received via the send/receive socket.  
+		    	        sendReceiveSocket.receive(receivePacket);
+		    	    } catch(IOException e) {
+		    	        e.printStackTrace();
+		    	        System.exit(1);
+		    	    }
+		    	
+		    	    printPacketInfo(receivePacket, PacketAction.RECEIVE);
+		    	    
+		    	    if (receivePacket.getPort() != connectionPort) {
+		    	    	System.out.println("Received WRQ ACK packet from another port");
+		    	    	System.out.println("Sending error packet...");
+		    	    	
+		    	    	// Form the error packet
+		            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+		            			receivePacket.getPort(), 
+		            			ErrorType.UNKNOWN_TRANSFER_ID, 
+		            			"client already connected");
+		            	
+		    		    // Process the error packet to send
+		    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
+		    			
+
+		    		    try {
+		    		    	// Send the error packet to the client
+		    		    	sendReceiveSocket.send(sendErrorPacket);
+		    		    } catch (IOException ioException) {
+		    		       ioException.printStackTrace();
+		    		       System.exit(1);
+		    		    }
+		    	    } else {
+		    	    	break;
+		    	    }
+	    	    } while(receivePacket.getPort() != connectionPort);
+
 	    	    
 	    	    // Validate the ACK packet
 	    	    try {

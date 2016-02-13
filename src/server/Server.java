@@ -86,7 +86,7 @@ public class Server implements Runnable {
 	
 	
 	public void receiveAndProcessRequest() {
-        byte dataFromHost[] = new byte[100];
+        byte dataFromHost[] = new byte[517];
 		receivePacket = new DatagramPacket(dataFromHost, dataFromHost.length);
 	    System.out.println("Server: waiting for Packet.\n");
 
@@ -110,6 +110,8 @@ public class Server implements Runnable {
 	    
 	    Thread requestThread = new Thread(new Request(receivePacket), 
 	    		"Server Request Thread (For Host " + receivePacket.getAddress() + ")");
+	    
+	    System.out.println("Server: starting new request thread with ID " + requestThread.getId());
 	    
 	    requestThread.start();
 		

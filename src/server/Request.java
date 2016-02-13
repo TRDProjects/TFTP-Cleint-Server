@@ -46,7 +46,7 @@ public class Request implements Runnable {
 	
 	public void printPacketInfo(DatagramPacket packet, Server.PacketAction action) {
 		System.out.println("\n");
-		System.out.println("Server (" + Thread.currentThread() + "): " + (action.equals(PacketAction.SEND) ? "Sending " : "Received ") + "packet:");
+		System.out.println("Server (Thread ID " + Thread.currentThread().getId() + "): " + (action.equals(PacketAction.SEND) ? "Sending " : "Received ") + "packet:");
 		System.out.println("   " + (action.equals(PacketAction.SEND) ? "To " : "From ") + "host: " + packet.getAddress());
 		System.out.println("   " + (action.equals(PacketAction.SEND) ? "Destination host " : "Host ") + "port: " + packet.getPort());
 		int len = packet.getLength();
