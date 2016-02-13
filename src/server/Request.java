@@ -46,6 +46,7 @@ public class Request implements Runnable {
 	
 	public void printPacketInfo(DatagramPacket packet, Server.PacketAction action) {
 		System.out.println("\n");
+		System.out.println("FROM PORT: " + sendReceiveSocket.getLocalPort());
 		System.out.println("Server (Thread ID " + Thread.currentThread().getId() + "): " + (action.equals(PacketAction.SEND) ? "Sending " : "Received ") + "packet:");
 		System.out.println("   " + (action.equals(PacketAction.SEND) ? "To " : "From ") + "host: " + packet.getAddress());
 		System.out.println("   " + (action.equals(PacketAction.SEND) ? "Destination host " : "Host ") + "port: " + packet.getPort());
@@ -474,7 +475,7 @@ public class Request implements Runnable {
 	
 	private void processWriteRequest() {
 		
-		System.out.println("Server (" + Thread.currentThread() + "): processing WRITE request");
+		System.out.println("Server (Thread ID " + Thread.currentThread().getId() + "): processing WRITE request");
 		
 		byte[] blockNumber = {0,0};
 		int dataLength = 512;
@@ -614,7 +615,7 @@ public class Request implements Runnable {
 
 		
 	    
-	    System.out.println("\n Server (" + Thread.currentThread() + "): Finished writing file");
+	    System.out.println("\n Server (Thread ID " + Thread.currentThread().getId() + "): Finished writing file");
 	    
 	    
 	    sendReceiveSocket.close();
@@ -652,7 +653,7 @@ public class Request implements Runnable {
 					return;
 				}
 	    } catch (IllegalTftpOperationException invalidPacketException) {
-	    	System.out.println("InvalidRequestException Thrown: " + invalidPacketException.getMessage());
+	    	System.out.println("IllegalTftpOperationException Thrown: " + invalidPacketException.getMessage());
 	    	System.out.println("Sending error packet and closing thread...");
 	    	
 	    	// Form the error packet

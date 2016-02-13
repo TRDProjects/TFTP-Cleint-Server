@@ -253,16 +253,6 @@ public class Client {
 	}
 	
 	
-	private boolean isInitialAckPacket(DatagramPacket packet) {
-		byte[] data = packet.getData();
-		
-		if (data[0] == 0 && data[1] == PacketType.ACK.getOpcode() && data[2] == 0 && data[3] == 0) {
-			return true;
-		}
-		
-		return false;
-	}
-	
 	private void sendFile(DatagramPacket packet, String fileName) {
 		int connectionPort = packet.getPort();
 		
@@ -405,7 +395,6 @@ public class Client {
 	        
 	        in.close();
     	} catch (FileNotFoundException e) {
-    		//TODO
     		System.out.println("No such file " + fileName);
     	} catch (IOException e) {
 	        e.printStackTrace();

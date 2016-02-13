@@ -31,7 +31,7 @@ public class ErrorSimulatorRequest implements Runnable {
   
   
   private void modifyRequestPacketUi(DatagramPacket packet) {
-	  System.out.println("\n------------- Request Packet Modification Menu ----------------");
+	  System.out.println("\n------------- Modification Menu For Request Packet----------------");
 	  System.out.println("Enter the error number of the error would you like to simulate: \n");
 	  
 	  System.out.println("0 : No error (i.e do not modify the packet)");
@@ -40,7 +40,7 @@ public class ErrorSimulatorRequest implements Runnable {
 	  System.out.println("2 : Empty filename");
 	  System.out.println("3 : Empty mode");
 	  System.out.println("4 : Invalid mode");
-	  System.out.println("5 : Duplicate WRQ packet (write request packet");
+	  System.out.println("5 : Duplicate WRQ packet (write request packet)");
 	  System.out.println("---------------------------------------------------------------\n");
 	  
 	  // Get the requested error from the user
@@ -111,7 +111,7 @@ public class ErrorSimulatorRequest implements Runnable {
 	  } else if (error == 5) {
 		  try {
 			  if (getPacketType(packet).equals(ErrorSimulator.PacketType.WRITE)) {
-				  System.out.println("\nSending duplicate WRQ packets: \n");
+				  System.out.println("\nSending duplicate WRQ packets:");
 				  
 			      // Process the packet to send
 			      printPacketInfo(packet, PacketAction.SEND);
@@ -140,7 +140,7 @@ public class ErrorSimulatorRequest implements Runnable {
   
   
   private void modifyAckPacketUi(DatagramPacket packet) {
-	  System.out.println("\n------------- ACK Packet Modification Menu ----------------");
+	  System.out.println("\n------------- Modification Menu For ACK Packet ----------------");
 	  System.out.println("Enter the error number of the error would you like to simulate: \n");
 	  
 	  System.out.println("0 : No error (i.e do not modify the packet)");
@@ -208,7 +208,7 @@ public class ErrorSimulatorRequest implements Runnable {
   
   
   private void modifyDataPacketUi(DatagramPacket packet) {
-	  System.out.println("\n------------- DATA Packet Modification Menu ----------------");
+	  System.out.println("\n------------- Modification Menu For DATA Packet ----------------");
 	  System.out.println("Enter the error number of the error would you like to simulate: \n");
 	  
 	  System.out.println("0 : No error (i.e do not modify the packet)");
