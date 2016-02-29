@@ -163,7 +163,7 @@ public class ErrorSimulatorRequest implements Runnable {
     		  sendPacketServer = errorManager.simulateError(sendPacketServer, currentDataPacketNumber);
     	  }
       } catch (InvalidPacketTypeException e) {
-    	  //System.out.println("InvalidPacketTypeException thrown: received packet with invalid opcode from server or client: " + e.getMessage());
+    	 // Do nothing
       }
       
       

@@ -330,6 +330,8 @@ public class Client {
 	        
 	        	
 	        	removeTrailingZeroBytesFromDataPacket(sendDataPacket);
+	        	
+	        	// Process the packet to send
 	    	    printPacketInfo(sendDataPacket, PacketAction.SEND);
 	    	    
 
@@ -361,7 +363,9 @@ public class Client {
 		    	    
 		    	    removeTrailingZeroBytesFromDataPacket(receivePacket);
 		    	
+		    	    // Process the packet received
 		    	    printPacketInfo(receivePacket, PacketAction.RECEIVE);
+		    	    
 		    	    
 		    	    System.out.println("PACKET PORT: " + receivePacket.getPort());
 		    	    
@@ -466,7 +470,7 @@ public class Client {
 	    	    	}
 	    	    	
 	    	    } catch (InvalidPacketTypeException e) {
-			    	System.out.println("*** Received Packet with invalid ACK opCode ***");
+			    	System.out.println("\n*** Received Packet with invalid ACK opCode ***");
 			    	
 			    	// send error to server for invalid ACK opcode
 	    	    	System.out.println("Sending error packet...");
@@ -516,8 +520,9 @@ public class Client {
 	
 	    
 	    do {
-		    // Process the packet received
 		    removeTrailingZeroBytesFromDataPacket(receivePacket);
+		
+            // Process the packet received
 		    printPacketInfo(receivePacket, PacketAction.RECEIVE);
 		    
 		    
@@ -580,20 +585,19 @@ public class Client {
 		    	    }
 				    
 		    	} else if (packetType.equals(PacketType.ERROR)) {
-		    		printPacketInfo(receivePacket, PacketAction.RECEIVE);
 		    		
 		    		ErrorType errorType = getErrorType(receivePacket);
 		    		
 		    		if (errorType != null) {
 		    			if (errorType.equals(ErrorType.ILLEGAL_TFTP_OPERATION)) {
-		    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error...Exiting...***");
+		    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error...Exiting...***\n");
 		    				System.exit(1);
 		    			}
 		    		}
 		    	}
 		    	
 		    } catch (InvalidPacketTypeException e) {
-		    	System.out.println("*** Received Packet with invalid DATA opCode ***");
+		    	System.out.println("\n*** Received Packet with invalid DATA opCode ***");
 		    	// send error to server for invalid DATA opcode
     	    	System.out.println("Sending error packet...");
     	    	
@@ -662,11 +666,13 @@ public class Client {
 		        System.exit(1);
 		    }
 		    
+            // Process the packet received
+		    printPacketInfo(receivePacket, PacketAction.RECEIVE);
+		    
 		    try {
 			    PacketType packetType = getPacketType(receivePacket);
 			    
 			    if (packetType.equals(PacketType.ERROR)) {
-			    	printPacketInfo(receivePacket, PacketAction.RECEIVE);
 			    	
 		    		ErrorType errorType = getErrorType(receivePacket);
 		    		
@@ -679,7 +685,7 @@ public class Client {
 			    }
 			    
 		    } catch (InvalidPacketTypeException e) {
-		    	System.out.println("*** Received Packet with invalid DATA opCode ***");
+		    	System.out.println("\n*** Received Packet with invalid DATA opCode ***");
 		    	// send error to server for invalid DATA opcode
     	    	System.out.println("Sending error packet...");
     	    	

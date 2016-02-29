@@ -366,7 +366,7 @@ public class Request implements Runnable {
 	    	    
 	    	    // Construct a DatagramPacket for receiving the ACK packet
 	    	    // Note that an ACK packet should be 4 bytes long but we create a larger buffer for error checking purposes
-	    	    byte dataForAck[] = new byte[5];
+	    	    byte dataForAck[] = new byte[517];
 	    	    receivePacket = new DatagramPacket(dataForAck, dataForAck.length);
 	    	
 	    	    try {
@@ -378,14 +378,17 @@ public class Request implements Runnable {
 	    	    }
 	    	    
 	    	    
+	    	    // Process the packet recieved
+	    	    printPacketInfo(receivePacket, PacketAction.RECEIVE);
+	    	    
+	    	    
 			    // Check if the packet received is an error which requires thread interruption
 			    if (packetContainsErrorThatRequiresThreadInterruption(receivePacket)) {
-			    	System.out.print("\nReceived error packet that requires thread interruption. CLosing thread...");
+			    	System.out.print("\n*** Received error packet that requires thread interruption. CLosing thread...");
 			    	Thread.currentThread().interrupt();
 			    	return;
 			    }
 	    	
-	    	    printPacketInfo(receivePacket, PacketAction.RECEIVE);
 	    	    
 	    	    // Validate the ACK packet
 	    	    try {
@@ -527,6 +530,9 @@ public class Request implements Runnable {
 			    }
 			    
 			    
+			    // Process the packet received
+			    printPacketInfo(receivePacket, PacketAction.RECEIVE);
+			    
 			    // Check if the packet received is an error which requires thread interruption
 			    if (packetContainsErrorThatRequiresThreadInterruption(receivePacket)) {
 			    	System.out.print("\nReceived error packet that requires thread interruption. CLosing thread...");
@@ -534,9 +540,7 @@ public class Request implements Runnable {
 			    	return;
 			    }
 			    
-			    // Process the packet received
 			    removeTrailingZeroBytesFromDataPacket(receivePacket);
-			    printPacketInfo(receivePacket, PacketAction.RECEIVE);
 			    
 			    
 			    // Validate the DATA packet

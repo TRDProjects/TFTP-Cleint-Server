@@ -111,7 +111,7 @@ public class Server implements Runnable {
 	    Thread requestThread = new Thread(new Request(receivePacket), 
 	    		"Server Request Thread (For Host " + receivePacket.getAddress() + ")");
 	    
-	    System.out.println("Server: starting new request thread with ID " + requestThread.getId());
+	    System.out.println("\n\n >>> Server: starting new request thread with ID " + requestThread.getId());
 	    
 	    requestThread.start();
 		

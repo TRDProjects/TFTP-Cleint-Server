@@ -216,6 +216,8 @@ public class ErrorManager {
 		  
 		  
 	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LARGE_DATA_PACKET) {
+		  System.out.print("   Enter the number of the DATA packet you would like to make larger (i.e. 1): ");
+		  targetPacketNumber = Keyboard.getInteger();
 		  
 		  
 	  } else {
