@@ -18,8 +18,14 @@ public class ErrorSimulatorRequest implements Runnable {
   
   private DatagramPacket requestPacket;
   
+  private ErrorManager errorManager;
+  private int currentAckPacketNumber, currentDataPacketNumber;
+  
   public ErrorSimulatorRequest(DatagramPacket requestPacket) {
     this.requestPacket = requestPacket;
+    this.errorManager = new ErrorManager();
+    this.currentAckPacketNumber = 0;
+    this.currentDataPacketNumber = 0;
     
       try {
         sendReceiveSocket = new DatagramSocket();
@@ -29,338 +35,8 @@ public class ErrorSimulatorRequest implements Runnable {
         }
   }
   
-  
-  private void modifyRequestPacketUi(DatagramPacket packet) {
-	  System.out.println("\n------------- Modification Menu For Request Packet----------------");
-	  System.out.println("Enter the error number of the error would you like to simulate: \n");
-	  
-	  System.out.println("0 : No error (i.e do not modify the packet)");
-	  
-	  System.out.println("1 : Invalid request packet TFTP opcode");
-	  System.out.println("2 : Empty filename");
-	  System.out.println("3 : Empty mode");
-	  System.out.println("4 : Invalid mode");
-	  System.out.println("5 : Duplicate WRQ packet (write request packet)");
-	  System.out.println("---------------------------------------------------------------\n");
-	  
-	  // Get the requested error from the user
-	  int error =  Keyboard.getInteger();
-
-	  
-	  // Make sure it's a valid entry
-	  while(error > 5  || error < 0){
-		  System.out.println("try again");
-		  error = Keyboard.getInteger();
-	  }
-	  
-	  
-	  if (error == 1) {
-		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 01 or 02)
-		  //Then modify the packet
-	    	 System.out.println("Enter first digit of desired opcode: \n");
-	      	 
-			  //Get requested first digit of opcode
-			  int firstOpcode = Keyboard.getInteger();
-	  	 
-			  while(firstOpcode > 9 || firstOpcode < 0 ){
-				  System.out.println("must be between 0 and 9\n");
-				  firstOpcode = Keyboard.getInteger();
-			  }
-			  
-	    	 System.out.println("Enter second digit of desired opcode: \n");
-	      	 
-			  //Get requested second digit of opcode
-			  int secondOpcode = Keyboard.getInteger();
-	  	 
-			  while(secondOpcode > 9 || secondOpcode < 0 ){
-				  System.out.println("must be between 0 and 9\n");
-				  secondOpcode = Keyboard.getInteger();
-			  }
-	  	 
-			  changePacketOpcode(packet, firstOpcode, secondOpcode);	
-		  
-	  } else if (error == 2) {
-		  //remove file name from the packet
-		  
-		  byte[] pData = new byte[packet.getLength()];
-		  System.arraycopy(packet.getData(), packet.getOffset(), pData, 0, packet.getLength());
-		  
-		  int fileNameSize = 0;
-		  
-		  for (int i = 2; pData[i] != 0; i++){
-			  fileNameSize++;
-		  }
-		  
-		  byte[] newData = new byte[pData.length - fileNameSize];
-		  newData[0] = pData[0];
-		  newData[1] = pData[1];
-		  
-		  System.arraycopy(pData, fileNameSize + 2, newData, 2, pData.length - fileNameSize - 2);
-		  
-		  packet.setData(newData);
-		  
-		
-	  } else if (error == 3) {
-		//remove mode from the packet
-		  
-		  changePacketMode(packet, "");
-		  
-
-	  } else if (error == 4) {
-		//get input from the user of the mode they would like to use
-		//then call method that changes the mode to what the user passed in
-		  
-		  System.out.println("Enter desired mode.");
-		  
-		  //Get new mode from user
-		  String mode = Keyboard.getString();
-		  
-		  changePacketMode(packet, mode);
-		  
-		  
-	  } else if (error == 5) {
-		  try {
-			  if (getPacketType(packet).equals(ErrorSimulator.PacketType.WRITE)) {
-				  System.out.println("\nSending duplicate WRQ packets:");
-				  
-			      // Process the packet to send
-			      printPacketInfo(packet, PacketAction.SEND);
-			      
-			      // Send the datagram packet to the server via the send/receive socket.
-				  // Note that here we send the WRQ packet once but once this method returns, 
-				  // the same packet will be sent again
-			      try {
-			         sendReceiveSocket.send(packet);
-			      } catch (IOException e) {
-			         e.printStackTrace();
-			         System.exit(1);
-			      }
-			  } else {
-				  System.out.println("Error: packet is not a WRQ.");
-			  }
-		  } catch (InvalidPacketTypeException e) {
-			  System.out.println("Error: packet is not a WRQ.");
-		  }
-				    
-	  } else {
-		  // Do not modify packet
-		  return;
-	  }
-  }
-  
-  
-  private void modifyAckPacketUi(DatagramPacket packet) {
-	  System.out.println("\n------------- Modification Menu For ACK Packet ----------------");
-	  System.out.println("Enter the error number of the error would you like to simulate: \n");
-	  
-	  System.out.println("0 : No error (i.e do not modify the packet)");
-	  
-	  System.out.println("1 : Invalid ACK packet TFTP opcode");
-	  System.out.println("2 : Invalid block number");
-	  System.out.println("---------------------------------------------------------------\n");
-	  
-	  // Get the requested error from the user
-	  int error =  Keyboard.getInteger();
-
-	  
-	  // Make sure it's a valid entry
-	  while(error > 2 || error < 0){
-		  System.out.println("try again");
-		  error = Keyboard.getInteger();
-	  }
-	  
-	  
-     if (error == 1) {
-		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 04)
-		  //Then modify the packet
-    	 System.out.println("Enter first digit of desired opcode: \n");
-  	 
-		  //Get requested first digit of opcode
-		  int firstOpcode = Keyboard.getInteger();
-  	 
-		  while(firstOpcode > 9 || firstOpcode < 0 ){
-			  System.out.println("must be between 0 and 9\n");
-			  firstOpcode = Keyboard.getInteger();
-		  }
-		  
-    	 System.out.println("Enter second digit of desired opcode: \n");
-      	 
-		  //Get requested second digit of opcode
-		  int secondOpcode = Keyboard.getInteger();
-  	 
-		  while(secondOpcode > 9 || secondOpcode < 0 ){
-			  System.out.println("must be between 0 and 9\n");
-			  secondOpcode = Keyboard.getInteger();
-		  }
-  	 
-		  changePacketOpcode(packet, firstOpcode, secondOpcode);	  	  
-		  
-	  } else if (error == 3) {
-			//get input from the user of the block number they would like to use
-			//then call method that changes the block number to what the user passed in
-			  System.out.println("Enter first digit of desired block number: \n");
-			  
-			  //Get first digit of requested new block number
-			  int firstBlockNumber = Keyboard.getInteger();
-			  
-			  while(firstBlockNumber > 9 || firstBlockNumber < 0){
-				  System.out.println("Must be between 0 and 9\n");
-				  firstBlockNumber = Keyboard.getInteger();
-			  }
-			  
-			  System.out.println("Enter second digit of desired block number: \n");
-			  
-			  //Get second digit of requested new block number
-			  int secondBlockNumber = Keyboard.getInteger();
-			  
-			  while(secondBlockNumber > 9 || secondBlockNumber < 0){
-				  System.out.println("Must be between 0 and 9\n");
-				  secondBlockNumber = Keyboard.getInteger();
-			  }
-			  
-			  changeBlockNumber(packet, firstBlockNumber, secondBlockNumber);
-		  
-	  } else {
-		  // Do not modify packet
-		  return;
-	  }
-  }
-  
-  
-  private void modifyDataPacketUi(DatagramPacket packet) {
-	  System.out.println("\n------------- Modification Menu For DATA Packet ----------------");
-	  System.out.println("Enter the error number of the error would you like to simulate: \n");
-	  
-	  System.out.println("0 : No error (i.e do not modify the packet)");
-	  
-	  System.out.println("1 : Invalid DATA packet TFTP opcode");
-	  System.out.println("2 : Invalid block number");
-	  System.out.println("3 : Large DATA packet (larger than 516 bytes)");
-	  System.out.println("---------------------------------------------------------------\n");
-	  
-	  // Get the requested error from the user
-	  int error =  Keyboard.getInteger();
-
-	  
-	  // Make sure it's a valid entry
-	  while(error > 3 || error < 0){
-		  System.out.println("try again");
-		  error = Keyboard.getInteger();
-	  }
-	  
-	  
-     if (error == 1) {
-		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 03)
-		  //Then modify the packet
-    	 System.out.println("Enter first digit of desired opcode: \n");
-      	 
-		  //Get requested first digit of opcode
-		  int firstOpcode = Keyboard.getInteger();
-  	 
-		  while(firstOpcode > 9 || firstOpcode < 0 ){
-			  System.out.println("must be between 0 and 9\n");
-			  firstOpcode = Keyboard.getInteger();
-		  }
-		  
-    	 System.out.println("Enter second digit of desired opcode: \n");
-      	 
-		  //Get requested second digit of opcode
-		  int secondOpcode = Keyboard.getInteger();
-  	 
-		  while(secondOpcode > 9 || secondOpcode < 0 ){
-			  System.out.println("must be between 0 and 9\n");
-			  secondOpcode = Keyboard.getInteger();
-		  }
-  	 
-		  changePacketOpcode(packet, firstOpcode, secondOpcode);	
-		  
-	  } else if (error == 2) {
-			//get input from the user of the block number they would like to use
-			//then call method that changes the block number to what the user passed in
-			  System.out.println("Enter first digit of desired block number: \n");
-			  
-			  //Get first digit of requested new block number
-			  int firstBlockNumber = Keyboard.getInteger();
-			  
-			  while(firstBlockNumber > 9 || firstBlockNumber < 0){
-				  System.out.println("Must be between 0 and 9\n");
-				  firstBlockNumber = Keyboard.getInteger();
-			  }
-			  
-			  System.out.println("Enter second digit of desired block number: \n");
-			  
-			  //Get second digit of requested new block number
-			  int secondBlockNumber = Keyboard.getInteger();
-			  
-			  while(secondBlockNumber > 9 || secondBlockNumber < 0){
-				  System.out.println("Must be between 0 and 9\n");
-				  secondBlockNumber = Keyboard.getInteger();
-			  }
-			  
-			  changeBlockNumber(packet, firstBlockNumber, secondBlockNumber);
-		  
-	  } else if (error == 3) {
-		  // Add junk data to the original packet until the packet is 517 bytes long
-		  byte[] newData = new byte[517];
-		  System.arraycopy(packet.getData(), packet.getOffset(), newData, 0, packet.getLength());
-		  
-		  int i = newData.length - 1;
-		  while (i >= 0 && newData[i] == 0) {
-			  newData[i] = (byte) 82;
-			  i--;
-		  }
-		  
-		  packet.setData(newData);
-		  System.out.println(Integer.toString(packet.getLength()));
-	  } else {
-		  // Do not modify packet
-		  return;
-	  }
-  }
-  
-  private void changePacketOpcode(DatagramPacket data, int firstOpcodeDigit, int secondOpcodeDigit){
-	  byte[] pData = new byte[data.getLength()];
-	  System.arraycopy(data.getData(), data.getOffset(), pData, 0, data.getLength());
-	 
-	  pData[0] = (byte) firstOpcodeDigit;
-	  pData[1] = (byte) secondOpcodeDigit;
-	 
-	  data.setData(pData);
-  }
-  
-  private void changePacketMode(DatagramPacket data, String newMode){
-	  byte[] pData = new byte[data.getLength()];
-	  System.arraycopy(data.getData(), data.getOffset(), pData, 0, data.getLength());
-	  
-	  byte[] bArray = newMode.getBytes();
-	  
-	  int modeSize = 0;
-	  
-	  for (int i = pData.length - 2; pData[i] != 0; i--){
-		  modeSize++;
-	  }
-	  
-	  byte[] newData = new byte[pData.length - modeSize + bArray.length];
-	  
-	  System.arraycopy(pData, 0, newData, 0, pData.length - modeSize - 1);
-	  System.arraycopy(bArray, 0, newData, pData.length - modeSize - 1, bArray.length);
-	  
-	  data.setData(newData);
-	    
-  }
-  
-  private void changeBlockNumber(DatagramPacket data, int firstBlockNumber, int secondBlockNumber){
-	  byte[] pData = new byte[data.getLength()];
-	  System.arraycopy(data.getData(), data.getOffset(), pData, 0, data.getLength());
-	  
-	  pData[2] = (byte) firstBlockNumber;
-	  pData[3] = (byte) secondBlockNumber;
-	  
-	  data.setData(pData);
-	  
-  }
-  
-  
+ 
+ 
   public void printPacketInfo(DatagramPacket packet, ErrorSimulator.PacketAction action) {
     System.out.println("\n");
     System.out.println("ErrorSimulator (" + Thread.currentThread() + "): " + (action.equals(PacketAction.SEND) ? "Sending " : "Received ") + "packet:");
@@ -412,8 +88,8 @@ public class ErrorSimulatorRequest implements Runnable {
       printPacketInfo(requestPacket, PacketAction.RECEIVE);
       
     
-    // Construct a datagram packet to send to the Server
-    // This assumes that the Server is running on localhost
+      // Construct a datagram packet to send to the Server
+      // This assumes that the Server is running on localhost
       try {
         sendPacketServer = new DatagramPacket(requestPacket.getData(), requestPacket.getLength(),
             InetAddress.getLocalHost(), 69);
@@ -422,8 +98,11 @@ public class ErrorSimulatorRequest implements Runnable {
           System.exit(1);
       }
       
-      // Show the menu UI for packet modification for a request packet
-      modifyRequestPacketUi(sendPacketServer);
+      // Show the menu UI for error simulation
+      errorManager.userMenu();
+      
+      // TODO modify packet if required
+      sendPacketServer = errorManager.simulateError(sendPacketServer, 0);
       
       
       // Process the packet to send
@@ -473,19 +152,21 @@ public class ErrorSimulatorRequest implements Runnable {
             receivePacketServer.getAddress(), receivePacketServer.getPort());
       
       
-      // Check the type of the packet received (i.e. ACK or DATA) and show the proper packet modification menu UI
+      // Check the type of the packet received (i.e. ACK or DATA)
       try {
     	  ErrorSimulator.PacketType typeOfPacketReceived = getPacketType(sendPacketServer);
     	  
     	  if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.ACK)) {
-    		  modifyAckPacketUi(sendPacketServer);
-    		  
+    		  currentAckPacketNumber++;
+    		  sendPacketServer = errorManager.simulateError(sendPacketServer, currentAckPacketNumber);
     	  } else if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.DATA)) {
-    		  modifyDataPacketUi(sendPacketServer);
+    		  currentDataPacketNumber++;
+    		  sendPacketServer = errorManager.simulateError(sendPacketServer, currentDataPacketNumber);
     	  }
       } catch (InvalidPacketTypeException e) {
-    	  System.out.println("InvalidPacketTypeException thrown: received packet with invalid opcode from server or client: " + e.getMessage());
+    	  //System.out.println("InvalidPacketTypeException thrown: received packet with invalid opcode from server or client: " + e.getMessage());
       }
+      
       
       
       // Process the packet to send
@@ -527,18 +208,20 @@ public class ErrorSimulatorRequest implements Runnable {
           requestPacket.getAddress(), requestPacket.getPort());
       
       
-      // Check the type of the packet received (i.e. ACK or DATA) and show the proper packet modification menu UI
+      // Check the type of the packet received (i.e. ACK or DATA)
       try {
     	  ErrorSimulator.PacketType typeOfPacketReceived = getPacketType(sendPacketClient);
     	  
     	  if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.ACK)) {
-    		  modifyAckPacketUi(sendPacketClient);
+    		  currentAckPacketNumber++;
+    		  sendPacketClient = errorManager.simulateError(sendPacketClient, currentAckPacketNumber);
     		  
     	  } else if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.DATA)) {
-    		  modifyDataPacketUi(sendPacketClient);
+    		  currentDataPacketNumber++;
+    		  sendPacketClient = errorManager.simulateError(sendPacketClient, currentDataPacketNumber);
     	  }
       } catch (InvalidPacketTypeException e) {
-    	  System.out.println("InvalidPacketTypeException thrown: received packet with invalid opcode from server or client: " + e.getMessage());
+    	  //System.out.println("InvalidPacketTypeException thrown: received packet with invalid opcode from server or client: " + e.getMessage());
       }
       
       // Process the packet to send
