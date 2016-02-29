@@ -18,6 +18,7 @@ import java.util.Arrays;
 import client.IllegalTftpOperationException;
 import client.UnknownTransferIdException;
 import server.Server.ErrorType;
+import server.Server.PacketAction;
 import server.Server.PacketType;
 import util.Keyboard;
 
@@ -158,6 +159,8 @@ public class Client {
 	
 	private void validateDataPacket(DatagramPacket packet, byte[] expectedBlockNumber)
 			throws IllegalTftpOperationException, UnknownTransferIdException {
+		
+		removeTrailingZeroBytesFromDataPacket(packet);
 			
 		// Make sure the address the packet is coming from is the same
 		if (packet.getAddress().equals(serverAddress)) {
@@ -167,10 +170,11 @@ public class Client {
 			if (data[0] == 0 && data[1] == PacketType.DATA.getOpcode()) {
 				if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
 					
-					byte[] fileDataContainedInPacket = getFileDataFromDataPacket(packet);
+					
+					System.out.println("FILE DATA PORTION LENGTH IS: " + data.length);
 					
 					// Check to make sure the packet is not larger than expected
-					if (fileDataContainedInPacket.length <= 512) {
+					if (data.length <= 516) {
 						// The packet is valid
 						return;
 						
@@ -319,7 +323,66 @@ public class Client {
 	        byte[] dataFromFile = new byte[512];
 	        int n;
 	        
-	        byte[] blockNumber = {0, 1};
+	        byte[] blockNumber = {0, 0};
+	        
+    	    // Validate the first ACK packet received
+    	    try {
+    	    	validateAckPacket(packet, blockNumber);
+    	    	
+    	    } catch (IllegalTftpOperationException illegalOperationException) {
+    	    	System.out.println("IllegalTftpOperationException: " + illegalOperationException.getMessage());
+    	    	System.out.println("Sending error packet...");
+    	    	
+    	    	// Form the error packet
+            	DatagramPacket sendErrorPacket = formErrorPacket(packet.getAddress(), 
+            			packet.getPort(), 
+            			ErrorType.ILLEGAL_TFTP_OPERATION, 
+            			illegalOperationException.getMessage());
+            	
+    		    // Process the error packet to send
+    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
+    			
+
+    		    try {
+    		    	// Send the error packet
+    		    	sendReceiveSocket.send(sendErrorPacket);
+    		    } catch (IOException ioException) {
+    		       ioException.printStackTrace();
+    		       Thread.currentThread().interrupt();
+    		       System.exit(1);
+    		    }
+    	    	
+
+    	    	return;
+    	    	
+    	    	
+    	    } catch(UnknownTransferIdException unknownTransferIdException) {
+    	    	System.out.println("UnknownTransferIdException: " + unknownTransferIdException.getMessage());
+    	    	System.out.println("Sending error packet...");
+    	    	
+    	    	// Form the error packet
+            	DatagramPacket sendErrorPacket = formErrorPacket(packet.getAddress(), 
+            			packet.getPort(), 
+            			ErrorType.UNKNOWN_TRANSFER_ID, 
+            			unknownTransferIdException.getMessage());
+            	
+    		    // Process the error packet to send
+    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
+    			
+
+    		    try {
+    		    	// Send the error packet
+    		    	sendReceiveSocket.send(sendErrorPacket);
+    		    } catch (IOException ioException) {
+    		       ioException.printStackTrace();
+    		       Thread.currentThread().interrupt();
+    		       System.exit(1);
+    		    }
+    	    	
+    	    }
+    	    
+            // First ACK packet has been validated so we increment the block number now to 01
+    	    blockNumber = incrementBlockNumber(blockNumber);
 	        
 	        // Read the file in 512 byte chunks
 	        while ((n = in.read(dataFromFile)) != -1) {
@@ -405,7 +468,7 @@ public class Client {
 	    	    	    	validateAckPacket(receivePacket, blockNumber);
 	    	    	    	
 	    	    	    } catch (IllegalTftpOperationException illegalOperationException) {
-	    	    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
+	    	    	    	System.out.println("IllegalTftpOperationException: " + illegalOperationException.getMessage());
 	    	    	    	System.out.println("Sending error packet...");
 	    	    	    	
 	    	    	    	// Form the error packet
@@ -426,12 +489,13 @@ public class Client {
 	    	    		       System.exit(1);
 	    	    		    }
 	    	    		    
-	    	    		    System.out.println("\nExiting...");
-	    	    		    System.exit(1);
+	    					System.out.println("\n*** Ending session...***");
+	    					//System.exit(1);
+	    					return;
 	    	    	    	
 	    	    	    	
 	    	    	    } catch(UnknownTransferIdException unknownTransferIdException) {
-	    	    	    	System.out.println("UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
+	    	    	    	System.out.println("UnknownTransferIdException: " + unknownTransferIdException.getMessage());
 	    	    	    	System.out.println("Sending error packet...");
 	    	    	    	
 	    	    	    	// Form the error packet
@@ -463,8 +527,9 @@ public class Client {
 			    		
 			    		if (errorType != null) {
 			    			if (errorType.equals(ErrorType.ILLEGAL_TFTP_OPERATION)) {
-			    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error...Exiting...***");
-			    				System.exit(1);
+			    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error packet...Ending session...***");
+			    				//System.exit(1);
+			    				return;
 			    			}
 			    		}
 	    	    	}
@@ -493,8 +558,9 @@ public class Client {
 	    		       System.exit(1);
 	    		    }
 	    		    
-	    		    System.out.println("\nExiting...");
-	    		    System.exit(1);
+					System.out.println("\n*** Ending session...***");
+					//System.exit(1);
+					return;
 	    	    }
 
 	    	    
@@ -535,7 +601,7 @@ public class Client {
 				    	validateDataPacket(receivePacket, blockNumber);
 				    	
 		    	    } catch (IllegalTftpOperationException illegalOperationException) {
-		    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
+		    	    	System.out.println("IllegalTftpOperationException: " + illegalOperationException.getMessage());
 		    	    	System.out.println("Sending error packet...");
 		    	    	
 		    	    	// Form the error packet
@@ -557,11 +623,12 @@ public class Client {
 		    		       System.exit(1);
 		    		    }
 		    	    	
-		    		    System.out.println("\nEnding this session...");
-		    		    return;
+						System.out.println("\n*** Ending session...***");
+						//System.exit(1);
+						return;
 		    	    	
 		    	    } catch(UnknownTransferIdException unknownTransferIdException) {
-		    	    	System.out.println("UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
+		    	    	System.out.println("UnknownTransferIdException: " + unknownTransferIdException.getMessage());
 		    	    	System.out.println("Sending error packet...");
 		    	    	
 		    	    	// Form the error packet
@@ -590,8 +657,9 @@ public class Client {
 		    		
 		    		if (errorType != null) {
 		    			if (errorType.equals(ErrorType.ILLEGAL_TFTP_OPERATION)) {
-		    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error...Exiting...***\n");
-		    				System.exit(1);
+		    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error packet...Ending session...***");
+		    				//System.exit(1);
+		    				return;
 		    			}
 		    		}
 		    	}
@@ -619,8 +687,9 @@ public class Client {
     		       System.exit(1);
     		    }
     		    
-    		    System.out.println("\nExiting...");
-    		    System.exit(1);
+				System.out.println("\n*** Ending session...***");
+				//System.exit(1);
+				return;
 		    }
 		    
 		   
@@ -678,8 +747,9 @@ public class Client {
 		    		
 		    		if (errorType != null) {
 		    			if (errorType.equals(ErrorType.ILLEGAL_TFTP_OPERATION)) {
-		    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error...Exiting...***");
-		    				System.exit(1);
+		    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error packet...Ending session...***");
+		    				//System.exit(1);
+		    				return;
 		    			}
 		    		}
 			    }
@@ -707,8 +777,9 @@ public class Client {
     		       System.exit(1);
     		    }
     		    
-    		    System.out.println("\nExiting...");
-    		    System.exit(1);
+				System.out.println("\n*** Ending session...***");
+				//System.exit(1);
+				return;
 		    }
 		    
 		    
@@ -822,8 +893,9 @@ public class Client {
 	    		
 	    		if (errorType != null) {
 	    			if (errorType.equals(ErrorType.ILLEGAL_TFTP_OPERATION)) {
-	    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error...Exiting...***");
-	    				System.exit(1);
+	    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error packet...Ending session...***");
+	    				//System.exit(1);
+	    				return;
 	    			}
 	    		}
 	    	}
@@ -854,8 +926,9 @@ public class Client {
     		       System.exit(1);
     		    }
     		    
-    		    System.out.println("\nExiting...");
-    		    System.exit(1);
+				System.out.println("\n*** Ending session...***");
+				//System.exit(1);
+				return;
     		    
 	    	} else if (type.equals(PacketType.WRITE)) {
 		    	System.out.println("*** Received Packet with invalid ACK opCode ***");
@@ -880,8 +953,9 @@ public class Client {
     		       System.exit(1);
     		    }
     		    
-    		    System.out.println("\nExiting...");
-    		    System.exit(1);
+				System.out.println("\n*** Ending session...***");
+				//System.exit(1);
+				return;
 	    	}
 	    }
 	   
