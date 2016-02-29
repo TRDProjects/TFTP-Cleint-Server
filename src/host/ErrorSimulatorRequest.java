@@ -79,6 +79,42 @@ public class ErrorSimulatorRequest implements Runnable {
 	  }
   }
   
+  
+  public void sendPacket(DatagramSocket socket, DatagramPacket packet) {
+      printPacketInfo(packet, PacketAction.SEND);
+
+      try {
+    	  socket.send(packet);
+      } catch (IOException e) {
+         e.printStackTrace();
+         System.exit(1);
+      }
+      
+      System.out.println("Error Simulator: packet sent");
+  }
+  
+  public DatagramPacket receivePacket(DatagramSocket socket, int bufferLength) {
+	  // Construct a DatagramPacket for receiving packets
+      byte dataBuffer[] = new byte[bufferLength];
+      DatagramPacket receivedPacket = new DatagramPacket(dataBuffer, dataBuffer.length);
+      System.out.println("Error Simulator: Waiting for Packet.\n");
+      
+      // Block until a datagram packet is received from the socket
+      try {        
+          System.out.println("Waiting...");
+          socket.receive(receivedPacket);
+      } catch (IOException e) {
+          System.out.print("IO Exception: likely:");
+          System.out.println("Receive Socket Timed Out.\n" + e);
+          e.printStackTrace();
+          System.exit(1);
+      }
+      
+      // Process the packet received
+      printPacketInfo(receivedPacket, PacketAction.RECEIVE);
+      
+      return receivedPacket;
+  }
 
   @Override
   public void run() {
@@ -103,20 +139,9 @@ public class ErrorSimulatorRequest implements Runnable {
       // TODO modify packet if required
       sendPacketServer = errorManager.simulateError(sendPacketServer, 0);
       
+      // Send the packet
+      sendPacket(sendReceiveSocket, sendPacketServer);
       
-      // Process the packet to send
-      printPacketInfo(sendPacketServer, PacketAction.SEND);
-      
-          
-      // Send the datagram packet to the server via the send/receive socket. 
-      try {
-         sendReceiveSocket.send(sendPacketServer);
-      } catch (IOException e) {
-         e.printStackTrace();
-         System.exit(1);
-      }
-
-      System.out.println("Error Simulator: packet sent");
       
       while (true) {
         receiveFromServerAndSendToClient();
@@ -126,30 +151,13 @@ public class ErrorSimulatorRequest implements Runnable {
   }
   
   public void receiveFromClientAndSendToServer() {
-      // Construct a DatagramPacket for receiving packets
-      byte dataFromClient[] = new byte[517];
-      receivePacketClient = new DatagramPacket(dataFromClient, dataFromClient.length);
-      System.out.println("Error Simulator: waiting for Packet.\n");
-      
-      // Block until a datagram packet is received from the receive socket
-      try {        
-          System.out.println("Waiting...");
-          sendReceiveSocket.receive(receivePacketClient);
-      } catch (IOException e) {
-          System.out.print("IO Exception: likely:");
-          System.out.println("Receive Socket Timed Out.\n" + e);
-          e.printStackTrace();
-          System.exit(1);
-      }
-      
-      // Process the packet received
-      printPacketInfo(receivePacketClient, PacketAction.RECEIVE);
+	  // Receive the packet from the client
+	  receivePacketClient = receivePacket(sendReceiveSocket, 517);
        
       // Construct a datagram packet to send to the Server
       // This assumes that the Server is running on localhost
       sendPacketServer = new DatagramPacket(receivePacketClient.getData(), receivePacketClient.getLength(),
             receivePacketServer.getAddress(), receivePacketServer.getPort());
-      
       
       // Check the type of the packet received (i.e. ACK or DATA)
       try {
@@ -167,37 +175,15 @@ public class ErrorSimulatorRequest implements Runnable {
       }
       
       
+      // Send the packet
+      sendPacket(sendReceiveSocket, sendPacketServer);
       
-      // Process the packet to send
-      printPacketInfo(sendPacketServer, PacketAction.SEND);
-          
-      // Send the datagram packet to the server via the send/receive socket. 
-      try {
-        sendReceiveSocket.send(sendPacketServer);
-      } catch (Exception e) {
-         e.printStackTrace();
-         System.exit(1);
-      }
-
-      System.out.println("Error Simulator: packet sent");
      
   }
   
   private void receiveFromServerAndSendToClient() {
-      // Construct a DatagramPacket for receiving packets
-      byte dataFromServer[] = new byte[517];
-      receivePacketServer = new DatagramPacket(dataFromServer, dataFromServer.length);
-  
-      try {
-          // Block until a datagram is received via sendReceiveSocket.  
-          sendReceiveSocket.receive(receivePacketServer);
-      } catch(IOException e) {
-          e.printStackTrace();
-          System.exit(1);
-      }
-  
-      // Process the received datagram.
-      printPacketInfo(receivePacketServer, PacketAction.RECEIVE);
+	  // Receive the packet from the server
+	  receivePacketServer = receivePacket(sendReceiveSocket, 517);
       
     
       // Construct a datagram packet to send to the Client
@@ -223,21 +209,8 @@ public class ErrorSimulatorRequest implements Runnable {
     	  //System.out.println("InvalidPacketTypeException thrown: received packet with invalid opcode from server or client: " + e.getMessage());
       }
       
-      // Process the packet to send
-      printPacketInfo(sendPacketClient, PacketAction.SEND);
-      
-        
-      // Send the datagram packet to the Client
-      try {
-        sendReceiveSocket.send(sendPacketClient);
-      } catch (Exception e) {
-         e.printStackTrace();
-         System.exit(1);
-      }
-        
-      
-     
-      System.out.println("Error Simulator: packet sent");
+      // Send the packet to the client
+      sendPacket(sendReceiveSocket, sendPacketClient);
       
     
   }
