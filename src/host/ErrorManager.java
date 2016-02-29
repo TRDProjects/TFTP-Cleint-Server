@@ -2,7 +2,6 @@ package host;
 
 import host.ErrorSimulator.PacketType;
 
-import java.lang.reflect.Array;
 import java.net.DatagramPacket;
 
 import util.Keyboard;

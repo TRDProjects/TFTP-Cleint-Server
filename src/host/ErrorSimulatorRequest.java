@@ -1,7 +1,6 @@
 package host;
 
 import host.ErrorSimulator.PacketAction;
-import util.Keyboard;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
