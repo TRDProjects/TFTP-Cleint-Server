@@ -183,9 +183,6 @@ public class Client {
 		return buffer.array();
 	}
 	
-	private short getBlockNumberAsShort(byte[] blockNumber) {
-		return ByteBuffer.wrap(blockNumber).getShort();
-	}
 	
 	private DatagramPacket formDataPacket(InetAddress address, int port, byte[] data, int dataLength, byte[] blockNumber) {
 		byte[] dataPacket = new byte [4 + data.length];
