@@ -1,7 +1,7 @@
 package client;
 
-import host.ErrorSimulator;
 import host.InvalidPacketTypeException;
+import host.ErrorSimulator.PacketAction;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -17,9 +17,6 @@ import java.util.Arrays;
 
 import client.IllegalTftpOperationException;
 import client.UnknownTransferIdException;
-import server.Server.ErrorType;
-import server.Server.PacketAction;
-import server.Server.PacketType;
 import util.Keyboard;
 
 public class Client {
@@ -134,6 +131,45 @@ public class Client {
 	   }
 	}
 	
+	  public void sendPacket(DatagramSocket socket, DatagramPacket packet) {
+	      printPacketInfo(packet, PacketAction.SEND);
+
+	      try {
+	    	  socket.send(packet);
+	      } catch (IOException e) {
+	         e.printStackTrace();
+	         System.exit(1);
+	      }
+	      
+	      System.out.println("Client: packet sent");
+	  }
+		  
+	  public DatagramPacket receivePacket(DatagramSocket socket, int bufferLength) {
+		  // Construct a DatagramPacket for receiving packets
+	      byte dataBuffer[] = new byte[bufferLength];
+	      DatagramPacket receivedPacket = new DatagramPacket(dataBuffer, dataBuffer.length);
+	      System.out.println("Client: waiting for packet.\n");
+	      
+	      // Block until a datagram packet is received from the socket
+	      try {        
+	          System.out.println("Waiting...");
+	          socket.receive(receivedPacket);
+	      } catch (IOException e) {
+	          System.out.print("IO Exception: likely:");
+	          System.out.println("Receive Socket Timed Out.\n" + e);
+	          e.printStackTrace();
+	          System.exit(1);
+	      }
+	      
+	      // If the packet is a DATA packet, remove the trailing 0 bytes
+	      removeTrailingZeroBytesFromDataPacket(receivedPacket);
+	      
+	      // Process the packet received
+	      printPacketInfo(receivedPacket, PacketAction.RECEIVE);
+	      
+	      return receivedPacket;
+	  }
+	
 	
 	private byte[] incrementBlockNumber(byte[] currentBlockNum) {
 		short blockNum = ByteBuffer.wrap(currentBlockNum).getShort();
@@ -169,10 +205,7 @@ public class Client {
 			
 			if (data[0] == 0 && data[1] == PacketType.DATA.getOpcode()) {
 				if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
-					
-					
-					System.out.println("FILE DATA PORTION LENGTH IS: " + data.length);
-					
+								
 					// Check to make sure the packet is not larger than expected
 					if (data.length <= 516) {
 						// The packet is valid
@@ -277,16 +310,21 @@ public class Client {
 	}
 	
 	private void removeTrailingZeroBytesFromDataPacket(DatagramPacket packet) {
-		byte[] data = packet.getData();
 		
-		// Make sure it's a DATA packet
-		if (data[0] == 0 && data[1] == PacketType.DATA.getOpcode()) {
-			// Remove trailing 0 bytes from data
-		    int i = data.length - 1;
-			while (i >= 0 && data[i] == 0) {
-				i--;
-		    }
-			packet.setData(Arrays.copyOf(data, i + 1));
+		try {
+			// Make sure it's a DATA packet
+			if (getPacketType(packet).equals(PacketType.DATA)) {
+				byte[] data = packet.getData();
+				
+				// Remove trailing 0 bytes from data
+			    int i = data.length - 1;
+				while (i >= 0 && data[i] == 0) {
+					i--;
+			    }
+				packet.setData(Arrays.copyOf(data, i + 1));
+				
+			}
+		} catch (InvalidPacketTypeException e) {
 			
 		}
 	}
@@ -314,8 +352,6 @@ public class Client {
 	private void sendFile(DatagramPacket packet, String fileName) {
 		int connectionPort = packet.getPort();
 		
-		printPacketInfo(packet, PacketAction.RECEIVE);
-		
 	    // Send data to be written to server
     	try {
         	BufferedInputStream in = new BufferedInputStream(new FileInputStream("src/client/files/" + fileName));
@@ -339,19 +375,10 @@ public class Client {
             			ErrorType.ILLEGAL_TFTP_OPERATION, 
             			illegalOperationException.getMessage());
             	
-    		    // Process the error packet to send
-    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-    			
-
-    		    try {
-    		    	// Send the error packet
-    		    	sendReceiveSocket.send(sendErrorPacket);
-    		    } catch (IOException ioException) {
-    		       ioException.printStackTrace();
-    		       Thread.currentThread().interrupt();
-    		       System.exit(1);
-    		    }
-    	    	
+            	
+            	// Send the error packet
+            	sendPacket(sendReceiveSocket, sendErrorPacket);
+            	 	    	
 
     	    	return;
     	    	
@@ -366,18 +393,8 @@ public class Client {
             			ErrorType.UNKNOWN_TRANSFER_ID, 
             			unknownTransferIdException.getMessage());
             	
-    		    // Process the error packet to send
-    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-    			
-
-    		    try {
-    		    	// Send the error packet
-    		    	sendReceiveSocket.send(sendErrorPacket);
-    		    } catch (IOException ioException) {
-    		       ioException.printStackTrace();
-    		       Thread.currentThread().interrupt();
-    		       System.exit(1);
-    		    }
+            	// Send the error packet
+            	sendPacket(sendReceiveSocket, sendErrorPacket);
     	    	
     	    }
     	    
@@ -394,43 +411,18 @@ public class Client {
 	        	
 	        	removeTrailingZeroBytesFromDataPacket(sendDataPacket);
 	        	
-	        	// Process the packet to send
-	    	    printPacketInfo(sendDataPacket, PacketAction.SEND);
-	    	    
+            	// Send the DATA packet
+            	sendPacket(sendReceiveSocket, sendDataPacket);
 
-	    	    // Send the datagram packet to the server via the send/receive socket. 
-	    	    try {
-	    	    	sendReceiveSocket.send(sendDataPacket);
-	    	    } catch (IOException e) {
-	    	        e.printStackTrace();
-	    	        System.exit(1);
-	    	    }
-	    	
-	    	    System.out.println("Client: Packet sent.\n");
-	    	    
+	    
 	    	    // Wait to receive an ACK
 	    	    
 	    	    
 	    	    do {
-		    	    // Construct a DatagramPacket for receiving the ACK packet
-		    	    byte dataForAck[] = new byte[517];
-		    	    receivePacket = new DatagramPacket(dataForAck, dataForAck.length);
-		    	
-		    	    try {
-		    	        // Block until a datagram is received via the send/receive socket.  
-		    	        sendReceiveSocket.receive(receivePacket);
-		    	    } catch(IOException e) {
-		    	        e.printStackTrace();
-		    	        System.exit(1);
-		    	    }
-		    	    
-		    	    removeTrailingZeroBytesFromDataPacket(receivePacket);
-		    	
-		    	    // Process the packet received
-		    	    printPacketInfo(receivePacket, PacketAction.RECEIVE);
-		    	    
-		    	    
-		    	    System.out.println("PACKET PORT: " + receivePacket.getPort());
+	    	    	
+	    	    	// Receive the packet
+	    	    	receivePacket = receivePacket(sendReceiveSocket, 517);
+	    	    	
 		    	    
 		    	    if (receivePacket.getPort() != connectionPort) {
 		    	    	System.out.println("Received WRQ ACK packet from another port");
@@ -442,17 +434,9 @@ public class Client {
 		            			ErrorType.UNKNOWN_TRANSFER_ID, 
 		            			"client already connected");
 		            	
-		    		    // Process the error packet to send
-		    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-		    			
-
-		    		    try {
-		    		    	// Send the error packet to the client
-		    		    	sendReceiveSocket.send(sendErrorPacket);
-		    		    } catch (IOException ioException) {
-		    		       ioException.printStackTrace();
-		    		       System.exit(1);
-		    		    }
+		            	// Send the error packet
+		            	sendPacket(sendReceiveSocket, sendErrorPacket);
+		            	
 		    	    } else {
 		    	    	break;
 		    	    }
@@ -477,17 +461,8 @@ public class Client {
 	    	            			ErrorType.ILLEGAL_TFTP_OPERATION, 
 	    	            			illegalOperationException.getMessage());
 	    	            	
-	    	    		    // Process the error packet to send
-	    	    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-	    	    			
-
-	    	    		    try {
-	    	    		    	// Send the error packet to the client
-	    	    		    	sendReceiveSocket.send(sendErrorPacket);
-	    	    		    } catch (IOException ioException) {
-	    	    		       ioException.printStackTrace();
-	    	    		       System.exit(1);
-	    	    		    }
+	    	            	// Send the error packet
+	    	            	sendPacket(sendReceiveSocket, sendErrorPacket);
 	    	    		    
 	    					System.out.println("\n*** Ending session...***");
 	    					//System.exit(1);
@@ -504,17 +479,8 @@ public class Client {
 	    	            			ErrorType.UNKNOWN_TRANSFER_ID, 
 	    	            			unknownTransferIdException.getMessage());
 	    	            	
-	    	    		    // Process the error packet to send
-	    	    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-	    	    			
-
-	    	    		    try {
-	    	    		    	// Send the error packet to the client
-	    	    		    	sendReceiveSocket.send(sendErrorPacket);
-	    	    		    } catch (IOException ioException) {
-	    	    		       ioException.printStackTrace();
-	    	    		       System.exit(1);
-	    	    		    }
+	    	            	// Send the error packet
+	    	            	sendPacket(sendReceiveSocket, sendErrorPacket);
 	    	    	    	
 	    	    	    }
 	    	    	    
@@ -546,17 +512,8 @@ public class Client {
 	            			ErrorType.ILLEGAL_TFTP_OPERATION, 
 	            			"Invalid opCode for expected ACK packet");
 	            	
-	    		    // Process the error packet to send
-	    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-	    			
-
-	    		    try {
-	    		    	// Send the error packet to the client
-	    		    	sendReceiveSocket.send(sendErrorPacket);
-	    		    } catch (IOException ioException) {
-	    		       ioException.printStackTrace();
-	    		       System.exit(1);
-	    		    }
+	            	// Send the error packet
+	            	sendPacket(sendReceiveSocket, sendErrorPacket);
 	    		    
 					System.out.println("\n*** Ending session...***");
 					//System.exit(1);
@@ -585,12 +542,7 @@ public class Client {
 		int dataLength = 512;
 	
 	    
-	    do {
-		    removeTrailingZeroBytesFromDataPacket(receivePacket);
-		
-            // Process the packet received
-		    printPacketInfo(receivePacket, PacketAction.RECEIVE);
-		    
+	    do {  
 		    
 		    try {
 		    	PacketType packetType = getPacketType(receivePacket);
@@ -610,18 +562,8 @@ public class Client {
 		            			ErrorType.ILLEGAL_TFTP_OPERATION, 
 		            			illegalOperationException.getMessage());
 		            	
-		    		    // Process the error packet to send
-		    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-		    			
-
-		    		    try {
-		    		    	// Send the error packet to the client
-		    		    	sendReceiveSocket.send(sendErrorPacket);
-		    		    } catch (IOException ioException) {
-		    		       ioException.printStackTrace();
-		    		       Thread.currentThread().interrupt();
-		    		       System.exit(1);
-		    		    }
+		            	// Send the error packet
+		            	sendPacket(sendReceiveSocket, sendErrorPacket);
 		    	    	
 						System.out.println("\n*** Ending session...***");
 						//System.exit(1);
@@ -637,17 +579,8 @@ public class Client {
 		            			ErrorType.UNKNOWN_TRANSFER_ID, 
 		            			unknownTransferIdException.getMessage());
 		            	
-		    		    // Process the error packet to send
-		    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-		    			
-
-		    		    try {
-		    		    	// Send the error packet to the client
-		    		    	sendReceiveSocket.send(sendErrorPacket);
-		    		    } catch (IOException ioException) {
-		    		       ioException.printStackTrace();
-		    		       System.exit(1);
-		    		    }
+		            	// Send the error packet
+		            	sendPacket(sendReceiveSocket, sendErrorPacket);
 		    	    	
 		    	    }
 				    
@@ -675,17 +608,8 @@ public class Client {
             			ErrorType.ILLEGAL_TFTP_OPERATION, 
             			"Invalid opCode for expected DATA packet");
             	
-    		    // Process the error packet to send
-    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-    			
-
-    		    try {
-    		    	// Send the error packet to the client
-    		    	sendReceiveSocket.send(sendErrorPacket);
-    		    } catch (IOException ioException) {
-    		       ioException.printStackTrace();
-    		       System.exit(1);
-    		    }
+            	// Send the error packet
+            	sendPacket(sendReceiveSocket, sendErrorPacket);
     		    
 				System.out.println("\n*** Ending session...***");
 				//System.exit(1);
@@ -695,7 +619,7 @@ public class Client {
 		   
 		    
 		    
-			// Construct an ACK datagram packet
+			// Construct an ACK packet
 		    try {
 		    	sendPacket = formACKPacket(receivePacket.getAddress(), receivePacket.getPort(), blockNumber);
 		    } catch (UnknownHostException e) {
@@ -703,40 +627,16 @@ public class Client {
 		        System.exit(1);
 		    }
 		    
-		    // Process the packet to send
-		    printPacketInfo(sendPacket, PacketAction.SEND);
-			
-
-		    try {
-		    	sendReceiveSocket.send(sendPacket);
-		    } catch (IOException e) {
-		       e.printStackTrace();
-		       System.exit(1);
-		    }
+		    // Send the ACK packet
+		    sendPacket(sendReceiveSocket, sendPacket);
+		    
 			
 		    // Increment the block number
 		    blockNumber = incrementBlockNumber(blockNumber);
 		    
-		    // Note that DATA packets should be 516 bytes maximum 
-		    // but our buffer is larger for error checking purposes
-	        byte dataFromServer[] = new byte[517];
-	        
-			receivePacket = new DatagramPacket(dataFromServer, dataFromServer.length);
-		    System.out.println("Client: waiting for Packet.\n");
-
-		    // Block until a datagram packet is received from the send/receive socket
-		    try {        
-		        System.out.println("Waiting...");
-		        sendReceiveSocket.receive(receivePacket);
-		    } catch (IOException e) {
-		        System.out.print("IO Exception: likely:");
-		        System.out.println("Receive Socket Timed Out.\n" + e);
-		        e.printStackTrace();
-		        System.exit(1);
-		    }
+		    // Wait to receive a packet back from the server
+		    receivePacket = receivePacket(sendReceiveSocket, 517);
 		    
-            // Process the packet received
-		    printPacketInfo(receivePacket, PacketAction.RECEIVE);
 		    
 		    try {
 			    PacketType packetType = getPacketType(receivePacket);
@@ -765,17 +665,8 @@ public class Client {
             			ErrorType.ILLEGAL_TFTP_OPERATION, 
             			"Invalid opCode for expected DATA packet");
             	
-    		    // Process the error packet to send
-    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-    			
-
-    		    try {
-    		    	// Send the error packet to the client
-    		    	sendReceiveSocket.send(sendErrorPacket);
-    		    } catch (IOException ioException) {
-    		       ioException.printStackTrace();
-    		       System.exit(1);
-    		    }
+            	// Send the error packet
+            	sendPacket(sendReceiveSocket, sendErrorPacket);
     		    
 				System.out.println("\n*** Ending session...***");
 				//System.exit(1);
@@ -788,9 +679,21 @@ public class Client {
 		    
 	    	
 	    } while(dataLength == 512);
+	    
+		// Construct the final ACK
+	    try {
+	    	sendPacket = formACKPacket(receivePacket.getAddress(), receivePacket.getPort(), blockNumber);
+	    } catch (UnknownHostException e) {
+	        e.printStackTrace();
+	        System.exit(1);
+	    }
+	    
+	    // Send the final ACK packet
+	    sendPacket(sendReceiveSocket, sendPacket);
 
 	    
 	    System.out.println("\n Client (" + Thread.currentThread() + "): Finished receiving file");
+	    
 	    
 	}
 	
@@ -848,32 +751,13 @@ public class Client {
 	    }
 		
 	    
-	    printPacketInfo(sendPacket, PacketAction.SEND);
+    	// Send the RRQ/WRQ packet
+    	sendPacket(sendReceiveSocket, sendPacket);
 	    
+    	
+    	// Wait to receive a packet from the server
+    	receivePacket = receivePacket(sendReceiveSocket, 517);
 
-	    // Send the datagram packet to the server via the send/receive socket. 
-	    try {
-	    	sendReceiveSocket.send(sendPacket);
-	    } catch (IOException e) {
-	        e.printStackTrace();
-	        System.exit(1);
-	    }
-	
-	    System.out.println("Client: Packet sent.\n");
-	
-	    // Construct a DatagramPacket for receiving packets
-	    byte data[] = new byte[517];
-	    receivePacket = new DatagramPacket(data, data.length);
-	
-	    try {
-	        // Block until a datagram is received via the send/receive socket.  
-	        sendReceiveSocket.receive(receivePacket);
-	    } catch(IOException e) {
-	        e.printStackTrace();
-	        System.exit(1);
-	    }
-
-	       
 	    
 	    try {
 	    	PacketType packetType = getPacketType(receivePacket);
@@ -887,7 +771,6 @@ public class Client {
 		    	receiveFile(receivePacket, fileName);
 		    	
 	    	} else if (packetType.equals(PacketType.ERROR)) {
-		    	printPacketInfo(receivePacket, PacketAction.RECEIVE);
 		    	
 	    		ErrorType errorType = getErrorType(receivePacket);
 	    		
@@ -914,17 +797,8 @@ public class Client {
             			ErrorType.ILLEGAL_TFTP_OPERATION, 
             			"Invalid opCode for expected DATA packet");
             	
-    		    // Process the error packet to send
-    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-    			
-
-    		    try {
-    		    	// Send the error packet to the client
-    		    	sendReceiveSocket.send(sendErrorPacket);
-    		    } catch (IOException ioException) {
-    		       ioException.printStackTrace();
-    		       System.exit(1);
-    		    }
+            	// Send the error packet
+            	sendPacket(sendReceiveSocket, sendErrorPacket);
     		    
 				System.out.println("\n*** Ending session...***");
 				//System.exit(1);
@@ -941,17 +815,8 @@ public class Client {
             			ErrorType.ILLEGAL_TFTP_OPERATION, 
             			"Invalid opCode for expected ACK packet");
             	
-    		    // Process the error packet to send
-    		    printPacketInfo(sendErrorPacket, PacketAction.SEND);
-    			
-
-    		    try {
-    		    	// Send the error packet to the client
-    		    	sendReceiveSocket.send(sendErrorPacket);
-    		    } catch (IOException ioException) {
-    		       ioException.printStackTrace();
-    		       System.exit(1);
-    		    }
+            	// Send the error packet
+            	sendPacket(sendReceiveSocket, sendErrorPacket);
     		    
 				System.out.println("\n*** Ending session...***");
 				//System.exit(1);

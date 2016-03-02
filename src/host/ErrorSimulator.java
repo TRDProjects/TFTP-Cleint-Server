@@ -61,9 +61,9 @@ public class ErrorSimulator {
 	
 	public void receiveFromClientAndSendToServer() {
 	    // Construct a DatagramPacket for receiving packets
-	    byte dataFromClient[] = new byte[516];
+	    byte dataFromClient[] = new byte[517];
 	    receivePacketClient = new DatagramPacket(dataFromClient, dataFromClient.length);
-	    System.out.println("Error Simulator: waiting for Packet.\n");
+	    System.out.println("Error Simulator: waiting for packet.\n");
 
 	    // Block until a datagram packet is received from the receive socket
 	    try {        
@@ -76,6 +76,8 @@ public class ErrorSimulator {
 	        System.exit(1);
 	    }
 	    
+	    System.out.println("\n** Error Sim (port 68): received packet from " + receivePacketClient.getAddress());
+	    System.out.println("   Starting new thread...\n");
 	    
 	    Thread requestThread = new Thread(new ErrorSimulatorRequest(receivePacketClient), 
 	    		"ErrorSim Request Thread (For Host " + receivePacketClient.getAddress() + ")");
