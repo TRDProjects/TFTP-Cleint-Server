@@ -437,6 +437,7 @@ public class ErrorSimulatorRequest implements Runnable {
      		
      	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_WRQ_PACKET) {
      		if (packetType.equals(PacketType.WRITE)) {
+     			System.out.println("\n **** Sending an extra WRQ packet ****");
      		    // Send the packet now, then the packet will be sent again (see end of method)
      		    sendPacket(sendReceiveSocket, packet);
      		}

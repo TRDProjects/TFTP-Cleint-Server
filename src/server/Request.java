@@ -16,6 +16,8 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import client.IllegalTftpOperationException;
+import client.UnknownTransferIdException;
 import server.Server.ErrorType;
 import server.Server.PacketAction;
 import server.Server.PacketType;
@@ -237,53 +239,92 @@ public class Request implements Runnable {
 		
 	}
 	
-	private void validateDataPacket(DatagramPacket packet, byte[] expectedBlockNumber)
+	private void validateDataPacket(DatagramPacket packet, byte[] expectedBlockNumber, int expectedPort)
 			throws IllegalTftpOperationException, UnknownTransferIdException {
 		
-		
-		// Make sure the address the packet is coming from is the same
-		if (packet.getAddress().equals(clientAddress)) {
+		removeTrailingZeroBytesFromDataPacket(packet);
 			
-			// Make sure the port the packet is coming from is the same
-			if (packet.getPort() == clientPort) {
+		// Make sure the address the packet is coming from is the same
+		if (packet.getAddress().equals(clientAddress) && packet.getPort() == expectedPort) {
 				
-				byte[] data = packet.getData();
-				
-				if (data[0] == 0 && data[1] == PacketType.DATA.getOpcode()) {
-					if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
-						
-						byte[] fileDataContainedInPacket = getFileDataFromDataPacket(packet);
-						
-						// Check to make sure the packet is not larger than expected
-						if (fileDataContainedInPacket.length <= 512) {
-							// The packet is valid
-							return;
-							
-						} else {
-							throw new IllegalTftpOperationException("DATA packet contains too much data. Maximum is 512 bytes");
-						}
-
+			byte[] data = packet.getData();
+			
+			if (data[0] == 0 && data[1] == PacketType.DATA.getOpcode()) {
+				if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
+								
+					// Check to make sure the packet is not larger than expected
+					if (data.length <= 516) {
+						// The packet is valid
+						return;
 						
 					} else {
-						throw new IllegalTftpOperationException("DATA packet with invalid block number. "
-								+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
-										+ " but received " + data[2] + data[3]);
+						throw new IllegalTftpOperationException("DATA packet contains too much data. Maximum is 512 bytes");
 					}
+
 					
 				} else {
-					throw new IllegalTftpOperationException("Invalid DATA packet opcode. Must be 0" + PacketType.DATA.getOpcode());
+					throw new IllegalTftpOperationException("DATA packet with invalid block number. "
+							+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
+									+ " but received " + data[2] + data[3]);
 				}
 				
+			} else {
+				throw new IllegalTftpOperationException("Invalid DATA packet opcode. Must be 0" + PacketType.DATA.getOpcode());
+			}
+				
+				
+		} else {
+			if (packet.getPort() != expectedPort) {
+				throw new UnknownTransferIdException("DATA packet received from invalid port (" + packet.getPort() + "). Expected packet from port " + expectedPort);
+			} else {
+				throw new UnknownTransferIdException("DATA packet received from invalid address: " + packet.getAddress());
+			}
+		}	
+	}
+	
+	
+	private void validateAckPacket(DatagramPacket packet, byte[] expectedBlockNumber, int expectedPort) 
+			throws IllegalTftpOperationException, UnknownTransferIdException {
+		
+		// Make sure the address the packet is coming from is the same
+		if (packet.getAddress().equals(clientAddress) && packet.getPort() == expectedPort) {
+				
+			byte[] data = packet.getData();
+			
+			if (data[0] == 0 && data[1] == PacketType.ACK.getOpcode()) {
+				if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
+					
+					// Check to make sure the ACK packet is exactly 4 bytes
+					for (int i = data.length - 1; i > 4; i--) {
+						if (data[i] != 0) {
+							throw new IllegalTftpOperationException("ACK packet is too long. Should be 4 bytes");
+						}
+					}
+					
+					
+				} else {
+					throw new IllegalTftpOperationException("Invalid block number. "
+							+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
+									+ " but received " + data[2] + data[3]);
+				}
 				
 			} else {
-				throw new UnknownTransferIdException("DATA packet received from invalid port");
+				throw new IllegalTftpOperationException("Invalid ACK packet opcode. Must be 0" + PacketType.ACK.getOpcode());
 			}
+				
 			
 		} else {
-			throw new UnknownTransferIdException("DATA packet received from invalid address");
+			if (packet.getPort() != expectedPort) {
+				throw new UnknownTransferIdException("ACK packet received from invalid port (" + packet.getPort() + "). Expected packet from port " + expectedPort);
+			} else {
+				throw new UnknownTransferIdException("ACK packet received from invalid address: " + packet.getAddress());
+			}
 		}
-		
+	
 	}
+	
+	
+	
 	
 	private byte[] getFileDataFromDataPacket(DatagramPacket packet) {
 		byte[] data = Arrays.copyOfRange(packet.getData(), 4, packet.getData().length);
@@ -362,61 +403,22 @@ public class Request implements Runnable {
 		return false;
 	}
 	
-	private void validateAckPacket(DatagramPacket packet, byte[] expectedBlockNumber) 
-			throws IllegalTftpOperationException, UnknownTransferIdException {
-		
-		// Make sure the address the packet is coming from is the same
-		if (packet.getAddress().equals(clientAddress)) {
-			
-			// Make sure the port the packet is coming from is the same
-			if (packet.getPort() == clientPort) {
-				
-				byte[] data = packet.getData();
-				
-				if (data[0] == 0 && data[1] == PacketType.ACK.getOpcode()) {
-					if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
-						
-						if (data[data.length - 1] == 0) {
-							// The packet is valid
-							return;
-							
-						} else {
-							throw new IllegalTftpOperationException("ACK packet is too long. Should be 4 bytes");
-						}
-						
-					} else {
-						throw new IllegalTftpOperationException("Invalid block number. "
-								+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
-										+ " but received " + data[2] + data[3]);
-					}
-					
-				} else {
-					throw new IllegalTftpOperationException("Invalid ACK packet opcode. Must be 0" + PacketType.ACK.getOpcode());
-				}
-				
-				
-			} else {
-				throw new UnknownTransferIdException("ACK packet received from invalid port");
-			}
-			
-		} else {
-			throw new UnknownTransferIdException("ACK packet received from invalid address");
-		}
-	}
 	
-	
-	
+
 	private void processReadRequest() {
 
 		System.out.println("Server (" + Thread.currentThread() + "): processing READ request");
 		
+    	int connectionPort = requestPacket.getPort();
+    	
+        byte[] dataFromFile = new byte[512];
+        int n;
+        
+        byte[] blockNumber = {0, 1};
+		
     	try {
         	BufferedInputStream in = new BufferedInputStream(new FileInputStream("src/server/files/" + fileName));
-	        
-	        byte[] dataFromFile = new byte[512];
-	        int n;
-	        
-	        byte[] blockNumber = {0, 1};
+
 	        
 	        // Read the file in 512 byte chunks
 	        while ((n = in.read(dataFromFile)) != -1) {
@@ -443,7 +445,7 @@ public class Request implements Runnable {
 	    	    
 	    	    // Validate the ACK packet
 	    	    try {
-	    	    	validateAckPacket(receivePacket, blockNumber);
+	    	    	validateAckPacket(receivePacket, blockNumber, connectionPort);
 	    	    	
 	    	    } catch (IllegalTftpOperationException illegalOperationException) {
 	    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
@@ -514,6 +516,8 @@ public class Request implements Runnable {
 		
 		System.out.println("Server (Thread ID " + Thread.currentThread().getId() + "): processing WRITE request");
 		
+		int connectionPort = requestPacket.getPort();
+		
 		byte[] blockNumber = {0,0};
 		int dataLength = 512;
 	    
@@ -555,7 +559,7 @@ public class Request implements Runnable {
 			    
 			    // Validate the DATA packet
 			    try {
-			    	validateDataPacket(receivePacket, blockNumber);
+			    	validateDataPacket(receivePacket, blockNumber, connectionPort);
 			    	
 	    	    } catch (IllegalTftpOperationException illegalOperationException) {
 	    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());

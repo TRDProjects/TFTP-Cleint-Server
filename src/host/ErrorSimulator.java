@@ -3,11 +3,14 @@ package host;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 
 
 public class ErrorSimulator {
+	
 	
 	public enum PacketAction {
 		SEND, RECEIVE
@@ -31,17 +34,29 @@ public class ErrorSimulator {
 		}
 	}
 	
-	DatagramPacket receivePacketClient;
-	DatagramSocket receiveSocket;
+	private InetAddress serverAddress;
+	private int serverPort;
+	
+	private DatagramPacket receivePacketClient;
+	private DatagramSocket receiveSocket;
 	
 	
-	public ErrorSimulator() {
+	public ErrorSimulator(String serverAddressString, int serverPort) {
 	    try {
 	    	receiveSocket = new DatagramSocket(68);
         } catch (SocketException se) {
             se.printStackTrace();
             System.exit(1);
         }
+	    
+	    try {
+	    	serverAddress = InetAddress.getByName(serverAddressString);
+	    } catch (UnknownHostException e) {
+            e.printStackTrace();
+            System.exit(1);
+	    }
+	    
+	    this.serverPort = serverPort;
 	}
 	
 	
@@ -88,7 +103,7 @@ public class ErrorSimulator {
 	
 	
 	public static void main(String args[]) {
-		ErrorSimulator newErrorSim = new ErrorSimulator();
+		ErrorSimulator newErrorSim = new ErrorSimulator("localhost", 69);
 		
 		while (true) {
 			newErrorSim.receiveFromClientAndSendToServer();
