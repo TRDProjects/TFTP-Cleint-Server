@@ -33,6 +33,7 @@ public class ErrorToSimulate {
 	}
 	
 	private ErrorToSimulateType type;
+	private boolean wasExecuted;
 	
 	public ErrorToSimulate(int errorNumber) {
 		for (ErrorToSimulateType eType: ErrorToSimulateType.values()) {
@@ -40,6 +41,8 @@ public class ErrorToSimulate {
 				this.type = eType;
 			}
 		}
+		
+		this.wasExecuted = false;
 	}
 	
 	
@@ -65,6 +68,9 @@ public class ErrorToSimulate {
 	public String getMode() {
 		return mode;
 	}
+	public boolean wasExecuted() {
+		return wasExecuted;
+	}
 	
 	public void setOpcode(byte[] code) {
 		this.opcode = code;
@@ -78,4 +84,8 @@ public class ErrorToSimulate {
 	public void setMode(String m) {
 		this.mode = m;
 	}
+	public void setWasExecuted(boolean value) {
+		this.wasExecuted = value;
+	}
+	
 }

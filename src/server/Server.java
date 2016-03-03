@@ -11,6 +11,8 @@ import util.Keyboard;
 
 public class Server implements Runnable {
 	
+	public static final int PORT = 69;
+	
 	public static enum PacketType {
 		READ((byte) 1), 
 		WRITE((byte) 2), 
@@ -63,7 +65,7 @@ public class Server implements Runnable {
 	
 	public Server() {
 		try {
-			receiveSocket = new DatagramSocket(69);
+			receiveSocket = new DatagramSocket(PORT);
 		} catch (SocketException se) {
             se.printStackTrace();
             System.exit(1);

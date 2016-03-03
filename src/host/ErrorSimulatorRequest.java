@@ -12,7 +12,11 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 
+import client.Client;
+
 public class ErrorSimulatorRequest implements Runnable {
+	 
+  private DatagramPacket receivePacket, sendPacket;
 	      
   private DatagramPacket sendPacketClient, receivePacketClient, sendPacketServer, receivePacketServer;
   private DatagramSocket sendReceiveSocket;
@@ -24,17 +28,32 @@ public class ErrorSimulatorRequest implements Runnable {
   
   private int currentAckPacketNumber, currentDataPacketNumber;
   
+  private InetAddress serverAddress;
+  private InetAddress clientAddress;
+  private int serverRequestThreadPort;
+  private int clientPort;
+  
   public ErrorSimulatorRequest(DatagramPacket requestPacket) {
     this.requestPacket = requestPacket;
     this.currentAckPacketNumber = 0;
     this.currentDataPacketNumber = 0;
     
-      try {
-        sendReceiveSocket = new DatagramSocket();
-        } catch (SocketException se) {
-            se.printStackTrace();
-            System.exit(1);
-        }
+    try {
+      sendReceiveSocket = new DatagramSocket();
+    } catch (SocketException se) {
+     se.printStackTrace();
+      System.exit(1);
+    }
+    
+    this.clientAddress = requestPacket.getAddress();
+    this.clientPort = requestPacket.getPort();
+    
+    try {
+    	serverAddress = InetAddress.getByName(ErrorSimulator.SERVER_ADDRESS);
+    } catch (UnknownHostException e) {
+        e.printStackTrace();
+        System.exit(1);
+    }
   }
   
  
@@ -393,99 +412,158 @@ public class ErrorSimulatorRequest implements Runnable {
 	 	packet.setData(newData);
  }
  
+  private DatagramPacket formACKPacket(InetAddress address, int port, byte[] blockNumber) {
+	  	byte[] ackData = new byte[4];
+	    ackData[0] = 0;
+	    ackData[1] = ErrorSimulator.PacketType.ACK.getOpcode();
+	    ackData[2] = blockNumber[0];
+	    ackData[3] = blockNumber[1];
+	
+	    return new DatagramPacket(ackData, ackData.length, address, port);
+	
+  }
 
- public void simulateError(DatagramPacket packet, int packetNumber) {
+  public void simulateErrorAndSendPacket(DatagramPacket packet, int packetNumber) {
  	try {
  		PacketType packetType = getPacketType(packet);
  		
-     	if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_RQ_OPCODE) {
-     		if (packetType.equals(PacketType.READ) || packetType.equals(PacketType.WRITE)) {
-     		
-     			System.out.println("\n **** Modifying RRQ/WRQ Packet...Setting invalid opCode ****");
-     			
-     			// Modify the opCode and return the packet
-     			changePacketOpcode(packet, errorToSimulate.getOpcode());
-     			
-     		}
-     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.EMPTY_FILENAME) {
-     		
-     		if (packetType.equals(PacketType.READ) || packetType.equals(PacketType.WRITE)) {
-     			System.out.println("\n **** Modifying RRQ/WRQ Packet...Setting empty file name ****");
-     			
-         		// Remove the filename and return the packet
-     			emptyFileNameFromRequestPacket(packet);
-     			
-     		}
-     		
-     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.EMPTY_MODE) {
-     		if (packetType.equals(PacketType.READ) || packetType.equals(PacketType.WRITE)) {
-     			System.out.println("\n **** Modifying RRQ/WRQ Packet...Setting empty mode ****");
-     			
-         		// Remove the mode and return the packet
-     			changePacketMode(packet, "");
-     			
-     		}
-     		
-     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_MODE) {
-     		if (packetType.equals(PacketType.READ) || packetType.equals(PacketType.WRITE)) {
-     			System.out.println("\n **** Modifying RRQ/WRQ Packet...Setting invalid mode ****");
-     			
-         		// Change the mode and return the packet
-     			changePacketMode(packet, errorToSimulate.getMode());
-     			
-     		}
-     		
-     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_WRQ_PACKET) {
-     		if (packetType.equals(PacketType.WRITE)) {
-     			System.out.println("\n **** Sending an extra WRQ packet ****");
-     		    // Send the packet now, then the packet will be sent again (see end of method)
-     		    sendPacket(sendReceiveSocket, packet);
-     		}
-     		
-     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_OPCODE) {
-     		if (packetType.equals(PacketType.ACK) && packetNumber == targetPacketNumber) {
-     			System.out.println("\n **** Modifying ACK Packet #" + packetNumber + "...Setting invalid opCode ****");
-     			
-     			// Modify the ACK packet opCode and return the packet
-     			changePacketOpcode(packet, errorToSimulate.getOpcode());
-     			
-     		}
-     		
-     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_BLOCK_NUMBER) {
-     		if (packetType.equals(PacketType.ACK) && packetNumber == targetPacketNumber) {
-     			System.out.println("\n **** Modifying ACK Packet #" + packetNumber + "...Setting invalid block number ****");
-     			
-     			// Modify the ACK packet block number and return the packet
-     			changePacketBlockNumber(packet, errorToSimulate.getBlockNumber());
-     			
-     		}
-     		
-     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_DATA_OPCODE) {
-     		if (packetType.equals(PacketType.DATA) && packetNumber == targetPacketNumber) {
-     			System.out.println("\n **** Modifying DATA Packet #" + packetNumber + "...Setting invalid opCode ****")
-     			;
-     			// Modify the DATA packet opCode and return the packet
-     			changePacketOpcode(packet, errorToSimulate.getOpcode());
-     			
-     		}
-     		
-     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_DATA_BLOCK_NUMBER) {
-     		if (packetType.equals(PacketType.DATA) && packetNumber == targetPacketNumber) {
-     			System.out.println("\n **** Modifying DATA Packet #" + packetNumber + "...Setting invalid block number ****");
-     			
-     			// Modify the DATA packet block number and return the packet
-     			changePacketBlockNumber(packet, errorToSimulate.getBlockNumber());
-     			
-     		}
-     		
-     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LARGE_DATA_PACKET) {
-     		if (packetType.equals(PacketType.DATA) && packetNumber == targetPacketNumber) {
-     			System.out.println("\n **** Modifying DATA Packet #" + packetNumber + "...Setting packet length larger than 516 bytes ****");
-     			
-     			makeDataPacketLarger(packet);
-     			
-     		}
-     	}
+ 		if (!errorToSimulate.wasExecuted()) {
+ 	     	if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_RQ_OPCODE) {
+ 	     		if (packetType.equals(PacketType.READ) || packetType.equals(PacketType.WRITE)) {
+ 	     		
+ 	     			System.out.println("\n **** Modifying RRQ/WRQ Packet...Setting invalid opCode ****");
+ 	     			
+ 	     			// Modify the opCode and return the packet
+ 	     			changePacketOpcode(packet, errorToSimulate.getOpcode());
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     			
+ 	     		}
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.EMPTY_FILENAME) {
+ 	     		
+ 	     		if (packetType.equals(PacketType.READ) || packetType.equals(PacketType.WRITE)) {
+ 	     			System.out.println("\n **** Modifying RRQ/WRQ Packet...Setting empty file name ****");
+ 	     			
+ 	         		// Remove the filename and return the packet
+ 	     			emptyFileNameFromRequestPacket(packet);
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     			
+ 	     		}
+ 	     		
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.EMPTY_MODE) {
+ 	     		if (packetType.equals(PacketType.READ) || packetType.equals(PacketType.WRITE)) {
+ 	     			System.out.println("\n **** Modifying RRQ/WRQ Packet...Setting empty mode ****");
+ 	     			
+ 	         		// Remove the mode and return the packet
+ 	     			changePacketMode(packet, "");
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     			
+ 	     		}
+ 	     		
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_MODE) {
+ 	     		if (packetType.equals(PacketType.READ) || packetType.equals(PacketType.WRITE)) {
+ 	     			System.out.println("\n **** Modifying RRQ/WRQ Packet...Setting invalid mode ****");
+ 	     			
+ 	         		// Change the mode and return the packet
+ 	     			changePacketMode(packet, errorToSimulate.getMode());
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     			
+ 	     		}
+ 	     		
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_WRQ_PACKET) {
+ 	     		if (getPacketType(requestPacket).equals(PacketType.WRITE)) {
+ 	     			
+ 	     			if (packetType.equals(PacketType.ACK) && packetNumber > 1) {
+ 	 	     			try {
+ 	 	     				DatagramSocket tempSocket = new DatagramSocket();
+ 	 	     				
+ 	 	         			System.out.println("\n **** Creating and sending an ACK packet for block 00 from another port ****");
+ 	 	     				
+ 	 	             	    // Construct an ACK for block number 00 to send to the client (to simulate a second ACK coming from another port)
+ 	 	         		    DatagramPacket sendAckPacket = formACKPacket(clientAddress, clientPort, new byte[] {0, 0});
+ 	 	         		    
+ 	 	         		    // Send the packet
+ 	 	         		    sendPacket(tempSocket, sendAckPacket);
+ 	 	         		    
+ 	 	         		    DatagramPacket tempReceivePacket = receivePacket(tempSocket, 517);
+ 	 	         		    
+ 	 	         		    
+ 	 	         		    System.out.println("\n **** Resuming file transfer on original port ****");
+ 	 	         		        		    
+ 	 	         		    tempSocket.close();
+ 	 	         		    
+ 	 	         		    errorToSimulate.setWasExecuted(true);
+ 	 	         			
+ 	 	     			}  catch (SocketException se) {
+ 	 	     	            se.printStackTrace();
+ 	 	     	            System.exit(1);
+ 	 	     	        }
+ 	     			}
+
+ 	     		    
+ 	     		} else {
+ 	     			System.out.println("\n **** NOTE: This error can only be simulated on a WRITE request...Aborting error simulation ****");
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     		}
+ 	     		
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_OPCODE) {
+ 	     		if (packetType.equals(PacketType.ACK) && packetNumber == targetPacketNumber) {
+ 	     			System.out.println("\n **** Modifying ACK Packet #" + packetNumber + "...Setting invalid opCode ****");
+ 	     			
+ 	     			// Modify the ACK packet opCode and return the packet
+ 	     			changePacketOpcode(packet, errorToSimulate.getOpcode());
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     			
+ 	     		}
+ 	     		
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_BLOCK_NUMBER) {
+ 	     		if (packetType.equals(PacketType.ACK) && packetNumber == targetPacketNumber) {
+ 	     			System.out.println("\n **** Modifying ACK Packet #" + packetNumber + "...Setting invalid block number ****");
+ 	     			
+ 	     			// Modify the ACK packet block number and return the packet
+ 	     			changePacketBlockNumber(packet, errorToSimulate.getBlockNumber());
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     			
+ 	     		}
+ 	     		
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_DATA_OPCODE) {
+ 	     		if (packetType.equals(PacketType.DATA) && packetNumber == targetPacketNumber) {
+ 	     			System.out.println("\n **** Modifying DATA Packet #" + packetNumber + "...Setting invalid opCode ****")
+ 	     			;
+ 	     			// Modify the DATA packet opCode and return the packet
+ 	     			changePacketOpcode(packet, errorToSimulate.getOpcode());
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     			
+ 	     		}
+ 	     		
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_DATA_BLOCK_NUMBER) {
+ 	     		if (packetType.equals(PacketType.DATA) && packetNumber == targetPacketNumber) {
+ 	     			System.out.println("\n **** Modifying DATA Packet #" + packetNumber + "...Setting invalid block number ****");
+ 	     			
+ 	     			// Modify the DATA packet block number and return the packet
+ 	     			changePacketBlockNumber(packet, errorToSimulate.getBlockNumber());
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     			
+ 	     		}
+ 	     		
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LARGE_DATA_PACKET) {
+ 	     		if (packetType.equals(PacketType.DATA) && packetNumber == targetPacketNumber) {
+ 	     			System.out.println("\n **** Modifying DATA Packet #" + packetNumber + "...Setting packet length larger than 516 bytes ****");
+ 	     			
+ 	     			makeDataPacketLarger(packet);
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     			
+ 	     		}
+ 	     	}
+ 		}
  		
  		
  	} catch (InvalidPacketTypeException e) {
@@ -501,97 +579,84 @@ public class ErrorSimulatorRequest implements Runnable {
   @Override
   public void run() {
 	  
-      // Process the received datagram.
+      // Process the received request packet
       printPacketInfo(requestPacket, PacketAction.RECEIVE);
-      
     
       // Construct a datagram packet to send to the Server
-      // This assumes that the Server is running on localhost
-      try {
-        sendPacketServer = new DatagramPacket(requestPacket.getData(), requestPacket.getLength(),
-            InetAddress.getLocalHost(), 69);
-      } catch (UnknownHostException e) {
-          e.printStackTrace();
-          System.exit(1);
-      }
+      sendPacket = new DatagramPacket(requestPacket.getData(), requestPacket.getLength(), serverAddress, ErrorSimulator.SERVER_PORT);
       
       // Show the menu UI for error simulation
       userMenu();
       
-      simulateError(sendPacketServer, 0);
+      // If the user selects an option that simulates an error for a RRQ/WRQ packet then the simulatError method will simulate that error 
+      // and send the packet to the server, otherwise the simulateError method will send the original unmodified request packet
+      simulateErrorAndSendPacket(sendPacket, 0);
       
       
-      
-      while (true) {
-        receiveFromServerAndSendToClient();
-        receiveFromClientAndSendToServer();
-      }
-    
-  }
-  
-  public void receiveFromClientAndSendToServer() {
-	  // Receive the packet from the client
-	  receivePacketClient = receivePacket(sendReceiveSocket, 517);
-       
-      // Construct a datagram packet to send to the Server
-      // This assumes that the Server is running on localhost
-      sendPacketServer = new DatagramPacket(receivePacketClient.getData(), receivePacketClient.getLength(),
-            receivePacketServer.getAddress(), receivePacketServer.getPort());
-      
-      // Check the type of the packet received (i.e. ACK or DATA)
-      try {
-    	  ErrorSimulator.PacketType typeOfPacketReceived = getPacketType(sendPacketServer);
-    	  
-    	  if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.ACK)) {
-    		  currentAckPacketNumber++;
-    		  simulateError(sendPacketServer, currentAckPacketNumber);
-    	  } else if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.DATA)) {
-    		  currentDataPacketNumber++;
-    		  simulateError(sendPacketServer, currentDataPacketNumber);
-    	  } else {
-    		  simulateError(sendPacketServer, 0);
-    	  }
-      } catch (InvalidPacketTypeException e) {
-    	 // Do nothing
-      }
-      
-      
+      // Receive the first packet from the server
+      receivePacket = receivePacket(sendReceiveSocket, 517);
      
-  }
-  
-  private void receiveFromServerAndSendToClient() {
-	  // Receive the packet from the server
-	  receivePacketServer = receivePacket(sendReceiveSocket, 517);
+      this.serverRequestThreadPort = receivePacket.getPort();
       
     
       // Construct a datagram packet to send to the Client
-      String dataReceivedString = new String(receivePacketServer.getData(), 0, receivePacketServer.getLength());
+      sendPacket = new DatagramPacket(receivePacket.getData(), receivePacket.getLength(), clientAddress, clientPort);
       
-      sendPacketClient = new DatagramPacket(dataReceivedString.getBytes(), dataReceivedString.getBytes().length,
-          requestPacket.getAddress(), requestPacket.getPort());
+      // Send the packet to the client
+      sendPacket(sendReceiveSocket, sendPacket);
       
       
-      // Check the type of the packet received (i.e. ACK or DATA)
+      while (true) {
+    	  receiveAndSendPackets();
+      }
+    
+  }
+  
+  
+  private void receiveAndSendPackets() {
+	  // Receive a packet
+	  receivePacket = receivePacket(sendReceiveSocket, 517);
+	  
+	  InetAddress destinationAddress;
+	  int destinationPort;
+	  
+	  // Set the destination address and port
+	  if (receivePacket.getAddress().equals(clientAddress)) {
+		  destinationAddress = serverAddress;
+		  destinationPort = serverRequestThreadPort;
+		  
+	  } else {
+		  destinationAddress = clientAddress;
+		  destinationPort = clientPort;
+	  }
+	  
+	  
+      // Construct a datagram packet to send to the destination
+      String dataReceivedString = new String(receivePacket.getData(), 0, receivePacket.getLength());
+      
+      sendPacket = new DatagramPacket(dataReceivedString.getBytes(), dataReceivedString.getBytes().length,
+    		  destinationAddress, destinationPort);
+      
+	  
       try {
-    	  ErrorSimulator.PacketType typeOfPacketReceived = getPacketType(sendPacketClient);
+    	  ErrorSimulator.PacketType typeOfPacketReceived = getPacketType(receivePacket);
     	  
     	  if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.ACK)) {
     		  currentAckPacketNumber++;
-    		  simulateError(sendPacketClient, currentAckPacketNumber);
-    		  
+    		  simulateErrorAndSendPacket(sendPacket, currentAckPacketNumber);
     	  } else if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.DATA)) {
     		  currentDataPacketNumber++;
-    		  simulateError(sendPacketClient, currentDataPacketNumber);
-    		  
+    		  simulateErrorAndSendPacket(sendPacket, currentDataPacketNumber);
     	  } else {
-    		  simulateError(sendPacketClient, 0);
+    		  simulateErrorAndSendPacket(sendPacket, 0);
     	  }
       } catch (InvalidPacketTypeException e) {
-    	  //System.out.println("InvalidPacketTypeException thrown: received packet with invalid opcode from server or client: " + e.getMessage());
+    	  // Send the packet without attempting to simulate any error
+    	 sendPacket(sendReceiveSocket, sendPacket);
       }
-      
-      
-    
+	
   }
+  
+  
 
 }

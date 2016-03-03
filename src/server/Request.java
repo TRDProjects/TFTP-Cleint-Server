@@ -244,7 +244,7 @@ public class Request implements Runnable {
 		
 		removeTrailingZeroBytesFromDataPacket(packet);
 			
-		// Make sure the address the packet is coming from is the same
+		// Make sure the address and port the packet is coming from is the same
 		if (packet.getAddress().equals(clientAddress) && packet.getPort() == expectedPort) {
 				
 			byte[] data = packet.getData();
@@ -275,7 +275,7 @@ public class Request implements Runnable {
 				
 		} else {
 			if (packet.getPort() != expectedPort) {
-				throw new UnknownTransferIdException("DATA packet received from invalid port (" + packet.getPort() + "). Expected packet from port " + expectedPort);
+				throw new UnknownTransferIdException("Unknown port: " + packet.getPort());
 			} else {
 				throw new UnknownTransferIdException("DATA packet received from invalid address: " + packet.getAddress());
 			}
@@ -286,7 +286,7 @@ public class Request implements Runnable {
 	private void validateAckPacket(DatagramPacket packet, byte[] expectedBlockNumber, int expectedPort) 
 			throws IllegalTftpOperationException, UnknownTransferIdException {
 		
-		// Make sure the address the packet is coming from is the same
+		// Make sure the address and port the packet is coming from is the same
 		if (packet.getAddress().equals(clientAddress) && packet.getPort() == expectedPort) {
 				
 			byte[] data = packet.getData();
@@ -315,7 +315,7 @@ public class Request implements Runnable {
 			
 		} else {
 			if (packet.getPort() != expectedPort) {
-				throw new UnknownTransferIdException("ACK packet received from invalid port (" + packet.getPort() + "). Expected packet from port " + expectedPort);
+				throw new UnknownTransferIdException("Unknown port: " + packet.getPort());
 			} else {
 				throw new UnknownTransferIdException("ACK packet received from invalid address: " + packet.getAddress());
 			}

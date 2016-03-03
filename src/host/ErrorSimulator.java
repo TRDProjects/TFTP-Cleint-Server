@@ -11,6 +11,8 @@ import java.util.Arrays;
 
 public class ErrorSimulator {
 	
+	public static final String SERVER_ADDRESS = "localhost";
+	public static final int SERVER_PORT = 69;
 	
 	public enum PacketAction {
 		SEND, RECEIVE
@@ -34,14 +36,12 @@ public class ErrorSimulator {
 		}
 	}
 	
-	private InetAddress serverAddress;
-	private int serverPort;
 	
 	private DatagramPacket receivePacketClient;
 	private DatagramSocket receiveSocket;
 	
 	
-	public ErrorSimulator(String serverAddressString, int serverPort) {
+	public ErrorSimulator() {
 	    try {
 	    	receiveSocket = new DatagramSocket(68);
         } catch (SocketException se) {
@@ -49,14 +49,6 @@ public class ErrorSimulator {
             System.exit(1);
         }
 	    
-	    try {
-	    	serverAddress = InetAddress.getByName(serverAddressString);
-	    } catch (UnknownHostException e) {
-            e.printStackTrace();
-            System.exit(1);
-	    }
-	    
-	    this.serverPort = serverPort;
 	}
 	
 	
@@ -103,7 +95,7 @@ public class ErrorSimulator {
 	
 	
 	public static void main(String args[]) {
-		ErrorSimulator newErrorSim = new ErrorSimulator("localhost", 69);
+		ErrorSimulator newErrorSim = new ErrorSimulator();
 		
 		while (true) {
 			newErrorSim.receiveFromClientAndSendToServer();
