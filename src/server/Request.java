@@ -28,7 +28,6 @@ public class Request implements Runnable {
 	private DatagramPacket requestPacket, sendPacket, receivePacket;
 	
 	private InetAddress clientAddress;
-	private int clientPort;
 	
 	private String fileName;
 	
@@ -45,7 +44,6 @@ public class Request implements Runnable {
         }
 	    
 	    this.clientAddress = requestPacket.getAddress();
-	    this.clientPort = requestPacket.getPort();
 	}
 	
 	public void printPacketInfo(DatagramPacket packet, Server.PacketAction action) {
@@ -438,6 +436,8 @@ public class Request implements Runnable {
 			    // Check if the packet received is an error which requires thread interruption
 			    if (packetContainsErrorThatRequiresThreadInterruption(receivePacket)) {
 			    	System.out.print("\n*** Received error packet that requires thread interruption. CLosing thread " + Thread.currentThread().getId() + "...\n");
+			    	
+			    	in.close();
 			    	Thread.currentThread().interrupt();
 			    	return;
 			    }
@@ -463,6 +463,7 @@ public class Request implements Runnable {
 	    	    	
 	    		    // Close the thread
 		    	    System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+		    	    in.close();
 	    	    	Thread.currentThread().interrupt();
 	    	    	return;
 	    	    	
@@ -550,6 +551,8 @@ public class Request implements Runnable {
 			    // Check if the packet received is an error which requires thread interruption
 			    if (packetContainsErrorThatRequiresThreadInterruption(receivePacket)) {
 			    	System.out.print("\n*** Received error packet that requires thread interruption. CLosing thread " + Thread.currentThread().getId() + "...\n");
+			    	
+			    	out.close();
 			    	Thread.currentThread().interrupt();
 			    	return;
 			    }
@@ -576,7 +579,9 @@ public class Request implements Runnable {
 	    	    	
 	    		    // Close the thread
 		    	    System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
-	    	    	Thread.currentThread().interrupt();
+	    	    	
+		    	    out.close();
+		    	    Thread.currentThread().interrupt();
 	    	    	return;
 	    	    	
 	    	    	

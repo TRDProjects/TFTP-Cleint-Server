@@ -12,13 +12,11 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 
-import client.Client;
 
 public class ErrorSimulatorRequest implements Runnable {
 	 
   private DatagramPacket receivePacket, sendPacket;
 	      
-  private DatagramPacket sendPacketClient, receivePacketClient, sendPacketServer, receivePacketServer;
   private DatagramSocket sendReceiveSocket;
   
   private DatagramPacket requestPacket;
@@ -488,7 +486,7 @@ public class ErrorSimulatorRequest implements Runnable {
  	 	         		    // Send the packet
  	 	         		    sendPacket(tempSocket, sendAckPacket);
  	 	         		    
- 	 	         		    DatagramPacket tempReceivePacket = receivePacket(tempSocket, 517);
+ 	 	         		    receivePacket(tempSocket, 517);
  	 	         		    
  	 	         		    
  	 	         		    System.out.println("\n **** Resuming file transfer on original port ****");
