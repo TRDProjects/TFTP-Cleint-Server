@@ -35,6 +35,7 @@ public class ErrorSimulatorRequest implements Runnable {
     this.requestPacket = requestPacket;
     this.currentAckPacketNumber = 0;
     this.currentDataPacketNumber = 0;
+    this.targetPacketNumber = 0;
     
     try {
       sendReceiveSocket = new DatagramSocket();
@@ -139,7 +140,7 @@ public class ErrorSimulatorRequest implements Runnable {
 		  errorToSimulate.setMode(mode);
 		  
 	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_WRQ_PACKET) {
-      // TODO
+      // Nothing to do here. No user input needed
 		  
 	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_OPCODE) {
 		  
@@ -259,7 +260,113 @@ public class ErrorSimulatorRequest implements Runnable {
 		  System.out.print("   Enter the number of the DATA packet you would like to make larger (i.e. 1): ");
 		  targetPacketNumber = Keyboard.getInteger();
 		  
+	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LOSE_PACKET) {
+	      System.out.println("   Choose the number corresponding to the type of packet you want to lose: ");
+			  
+	      System.out.println("     1 : RRQ");
+	      System.out.println("     2 : WRQ"); 
+	      System.out.println("     3 : ACK");
+	      System.out.println("     4 : DATA"); 
+	      
+	      int packetTypeInt = Keyboard.getInteger();
+	      
+		  while(packetTypeInt > 4 || packetTypeInt < 1){
+			  System.out.println("Invalid option. Try again: \n");
+			  packetTypeInt = Keyboard.getInteger();
+		  }
 		  
+		  if (packetTypeInt == 1) {
+			  errorToSimulate.setPacketType(PacketType.READ);
+		  } else if (packetTypeInt == 2) {
+			  errorToSimulate.setPacketType(PacketType.WRITE);
+		  } else if (packetTypeInt == 3) {
+			  errorToSimulate.setPacketType(PacketType.ACK);
+		  } else if (packetTypeInt == 4) {
+			  errorToSimulate.setPacketType(PacketType.DATA);
+		  }
+		  
+		  if (!errorToSimulate.getPacketType().equals(PacketType.READ) && !errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
+			  System.out.print("   Enter the number of the packet you want to lose (i.e. 1): ");
+		      targetPacketNumber = Keyboard.getInteger();
+		  } else {
+			  targetPacketNumber = 0;
+		  }
+		  
+	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DELAY_PACKET) {
+	      System.out.println("   Choose the number corresponding to the type of packet you want to delay: ");
+			  
+	      System.out.println("     1 : RRQ");
+	      System.out.println("     2 : WRQ"); 
+	      System.out.println("     3 : ACK");
+	      System.out.println("     4 : DATA"); 
+	      
+	      int packetTypeInt = Keyboard.getInteger();
+	      
+		  while(packetTypeInt > 4 || packetTypeInt < 1){
+			  System.out.println("Invalid option. Try again: \n");
+			  packetTypeInt = Keyboard.getInteger();
+		  }
+		  
+		  if (packetTypeInt == 1) {
+			  errorToSimulate.setPacketType(PacketType.READ);
+		  } else if (packetTypeInt == 2) {
+			  errorToSimulate.setPacketType(PacketType.WRITE);
+		  } else if (packetTypeInt == 3) {
+			  errorToSimulate.setPacketType(PacketType.ACK);
+		  } else if (packetTypeInt == 4) {
+			  errorToSimulate.setPacketType(PacketType.DATA);
+		  }
+		  
+		  if (!errorToSimulate.getPacketType().equals(PacketType.READ) && !errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
+			  System.out.print("   Enter the number of the packet you want to delay (i.e. 1): ");
+		      targetPacketNumber = Keyboard.getInteger();
+		  } else {
+			  targetPacketNumber = 0;
+		  }
+		  
+		  System.out.print("\n   Enter the delay (in milliseconds) for this packet: ");
+		  int delayBetweenDuplicates = Keyboard.getInteger();
+		  
+		  errorToSimulate.setDelayTime(delayBetweenDuplicates);
+		  
+		    
+	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_PACKET) {
+	      System.out.println("   Choose the number corresponding to the type of packet you want to duplicate: ");
+			  
+	      System.out.println("     1 : RRQ");
+	      System.out.println("     2 : WRQ"); 
+	      System.out.println("     3 : ACK");
+	      System.out.println("     4 : DATA"); 
+	      
+	      int packetTypeInt = Keyboard.getInteger();
+	      
+		  while(packetTypeInt > 4 || packetTypeInt < 1){
+			  System.out.println("Invalid option. Try again: \n");
+			  packetTypeInt = Keyboard.getInteger();
+		  }
+		  
+		  if (packetTypeInt == 1) {
+			  errorToSimulate.setPacketType(PacketType.READ);
+		  } else if (packetTypeInt == 2) {
+			  errorToSimulate.setPacketType(PacketType.WRITE);
+		  } else if (packetTypeInt == 3) {
+			  errorToSimulate.setPacketType(PacketType.ACK);
+		  } else if (packetTypeInt == 4) {
+			  errorToSimulate.setPacketType(PacketType.DATA);
+		  }
+		  
+		  if (!errorToSimulate.getPacketType().equals(PacketType.READ) && !errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
+			  System.out.print("   Enter the number of the packet you want to duplicate (i.e. 1): ");
+		      targetPacketNumber = Keyboard.getInteger();
+		  } else {
+			  targetPacketNumber = 0;
+		  }
+		  
+		  System.out.print("\n   Enter the delay (in milliseconds) between the duplicate packets: ");
+		  int delayBetweenDuplicates = Keyboard.getInteger();
+		  
+		  errorToSimulate.setDelayTime(delayBetweenDuplicates);
+				    
 	  } else {
 		  // No error
 	  }
@@ -422,6 +529,8 @@ public class ErrorSimulatorRequest implements Runnable {
   }
 
   public void simulateErrorAndSendPacket(DatagramPacket packet, int packetNumber) {
+	boolean sendThePacket = true;
+	
  	try {
  		PacketType packetType = getPacketType(packet);
  		
@@ -560,6 +669,71 @@ public class ErrorSimulatorRequest implements Runnable {
  	     			errorToSimulate.setWasExecuted(true);
  	     			
  	     		}
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LOSE_PACKET) {
+ 	     		if (packetType.equals(errorToSimulate.getPacketType()) && packetNumber == targetPacketNumber) {
+ 	     			if (errorToSimulate.getPacketType().equals(PacketType.READ)) {
+ 	     				System.out.println("\n **** Losing RRQ Packet ***"); 
+ 	     			} else if (errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
+ 	     				System.out.println("\n **** Losing WRQ Packet ***"); 
+ 	     			} else {
+ 	     	  			System.out.println("\n **** Losing " + errorToSimulate.getPacketType().name() + " Packet #" + packetNumber + " ****");
+ 	     			}
+ 	     			
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     			
+ 	     			// Don't send the packet
+ 	     			sendThePacket = false;
+ 	     		}
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DELAY_PACKET) {
+ 	     		if (packetType.equals(errorToSimulate.getPacketType()) && packetNumber == targetPacketNumber) {
+ 	     			if (errorToSimulate.getPacketType().equals(PacketType.READ)) {
+ 	     				System.out.println("\n **** Delaying RRQ Packet ***"); 
+ 	     			} else if (errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
+ 	     				System.out.println("\n **** Delaying WRQ Packet ***"); 
+ 	     			} else {
+ 	     	  			System.out.println("\n **** Delaying " + errorToSimulate.getPacketType().name() + 
+ 	     	  					" Packet #" + packetNumber + 
+ 	     	  					" by " + errorToSimulate.getDelayTime() + "ms ****");
+ 	     			}
+ 	     			
+ 	     			// Delay sending the packet
+ 	     			try {
+ 	     			    Thread.sleep(errorToSimulate.getDelayTime());
+ 	     			} catch(InterruptedException e){
+ 	     			    e.printStackTrace();
+ 	     			}
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+
+ 	     		}
+ 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_PACKET) {
+ 	     		if (packetType.equals(errorToSimulate.getPacketType()) && packetNumber == targetPacketNumber) {
+ 	     			if (errorToSimulate.getPacketType().equals(PacketType.READ)) {
+ 	     				System.out.println("\n **** Duplicating RRQ Packet ***"); 
+ 	     			} else if (errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
+ 	     				System.out.println("\n **** Duplicating WRQ Packet ***"); 
+ 	     			} else {
+ 	     	  			System.out.println("\n **** Duplicating " + errorToSimulate.getPacketType().name() + 
+ 	     	  					" Packet #" + packetNumber + 
+ 	     	  					". Delay time is " + errorToSimulate.getDelayTime() + "ms ****");
+ 	     			}
+ 	     			
+ 	     			// Send the first duplicate packet now
+ 	     			sendPacket(sendReceiveSocket, packet);
+ 	     			
+ 	     			// Delay
+ 	     			try {
+ 	     			    Thread.sleep(errorToSimulate.getDelayTime());
+ 	     			} catch(InterruptedException e){
+ 	     			    e.printStackTrace();
+ 	     			}
+ 	     			
+ 	     			errorToSimulate.setWasExecuted(true);
+ 	     			
+ 	     			// The second duplicate packet will be sent when the try block exits
+
+ 	     		}
  	     	}
  		}
  		
@@ -570,8 +744,10 @@ public class ErrorSimulatorRequest implements Runnable {
  	}
  	
 
-	// Send the packet (either modified or not modified)
-	sendPacket(sendReceiveSocket, packet);
+ 	if (sendThePacket) {
+ 		// Send the packet (either modified or not modified)
+ 		sendPacket(sendReceiveSocket, packet);
+ 	}
  }
 
   @Override

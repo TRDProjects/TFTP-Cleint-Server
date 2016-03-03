@@ -1,5 +1,7 @@
 package host;
 
+import host.ErrorSimulator.PacketType;
+
 public class ErrorToSimulate {
 	
 	public enum ErrorToSimulateType {
@@ -13,7 +15,11 @@ public class ErrorToSimulate {
 		INVALID_ACK_BLOCK_NUMBER(7, "Invalid ACK packet block number"),
 		INVALID_DATA_OPCODE(8, "Invalid DATA packet TFTP opcode"),
 		INVALID_DATA_BLOCK_NUMBER(9, "Invalid DATA packet block number"),
-		LARGE_DATA_PACKET(10, "Large DATA packet (larger than 516 bytes)");
+		LARGE_DATA_PACKET(10, "Large DATA packet (larger than 516 bytes)"),
+		
+		LOSE_PACKET(11, "Lose a packet"),
+		DELAY_PACKET(12, "Delay a packet"),
+		DUPLICATE_PACKET(13, "Duplicate a packet");
 		
 		private int errorNumber;
 		private String errorString;
@@ -35,6 +41,13 @@ public class ErrorToSimulate {
 	private ErrorToSimulateType type;
 	private boolean wasExecuted;
 	
+	private byte[] opcode;
+	private byte[] blockNumber;
+	private String fileName;
+	private String mode;
+	private PacketType packetType;
+	private int delayTime;
+	
 	public ErrorToSimulate(int errorNumber) {
 		for (ErrorToSimulateType eType: ErrorToSimulateType.values()) {
 			if (eType.getErrorNumber() == errorNumber) {
@@ -42,14 +55,11 @@ public class ErrorToSimulate {
 			}
 		}
 		
+		this.delayTime = 0;
+		
 		this.wasExecuted = false;
 	}
-	
-	
-	private byte[] opcode;
-	private byte[] blockNumber;
-	private String fileName;
-	private String mode;
+
 	
 	
 	public ErrorToSimulateType getType() {
@@ -68,8 +78,14 @@ public class ErrorToSimulate {
 	public String getMode() {
 		return mode;
 	}
+	public PacketType getPacketType() {
+		return packetType;
+	}
 	public boolean wasExecuted() {
 		return wasExecuted;
+	}
+	public int getDelayTime() {
+		return delayTime;
 	}
 	
 	public void setOpcode(byte[] code) {
@@ -86,6 +102,12 @@ public class ErrorToSimulate {
 	}
 	public void setWasExecuted(boolean value) {
 		this.wasExecuted = value;
+	}
+	public void setPacketType(ErrorSimulator.PacketType type) {
+		this.packetType = type;
+	}
+	public void setDelayTime(int delayInMs) {
+		this.delayTime = delayInMs;
 	}
 	
 }
