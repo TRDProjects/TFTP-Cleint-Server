@@ -41,6 +41,7 @@ public class ErrorToSimulate {
 	private ErrorToSimulateType type;
 	private boolean wasExecuted;
 	
+	private int targetPacketNumber;
 	private byte[] opcode;
 	private byte[] blockNumber;
 	private String fileName;
@@ -57,6 +58,7 @@ public class ErrorToSimulate {
 		
 		this.delayTime = 0;
 		
+		this.targetPacketNumber = 0;
 		this.wasExecuted = false;
 	}
 
@@ -66,6 +68,9 @@ public class ErrorToSimulate {
 		return type;
 	}
 	
+	public int getTargetPacketNumber() {
+		return targetPacketNumber;
+	}
 	public byte[] getOpcode() {
 		return opcode;
 	}
@@ -88,6 +93,9 @@ public class ErrorToSimulate {
 		return delayTime;
 	}
 	
+	public void setTargetPacketNumber(int num) {
+		this.targetPacketNumber = num;
+	}
 	public void setOpcode(byte[] code) {
 		this.opcode = code;
 	}

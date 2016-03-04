@@ -2,18 +2,20 @@ package host;
 
 import host.ErrorSimulator.PacketAction;
 import host.ErrorSimulator.PacketType;
-import util.Keyboard;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 
 
 public class ErrorSimulatorRequest implements Runnable {
+	
+  public static final int RECEIVE_TIMOUT_BEFORE_CLOSING_THREAD = 5000;
 	 
   private DatagramPacket receivePacket, sendPacket;
 	      
@@ -22,7 +24,6 @@ public class ErrorSimulatorRequest implements Runnable {
   private DatagramPacket requestPacket;
   
   private ErrorToSimulate errorToSimulate;
-  private int targetPacketNumber;
   
   private int currentAckPacketNumber, currentDataPacketNumber;
   
@@ -31,11 +32,11 @@ public class ErrorSimulatorRequest implements Runnable {
   private int serverRequestThreadPort;
   private int clientPort;
   
-  public ErrorSimulatorRequest(DatagramPacket requestPacket) {
+  public ErrorSimulatorRequest(DatagramPacket requestPacket, ErrorToSimulate errorToSimulate) {
     this.requestPacket = requestPacket;
+    this.errorToSimulate = errorToSimulate;
     this.currentAckPacketNumber = 0;
     this.currentDataPacketNumber = 0;
-    this.targetPacketNumber = 0;
     
     try {
       sendReceiveSocket = new DatagramSocket();
@@ -70,307 +71,6 @@ public class ErrorSimulatorRequest implements Runnable {
     System.out.println("       - Bytes: " + Arrays.toString(dataString.getBytes()));
   }
   
-  
-  public void userMenu() {
-	  System.out.println("\n------------- Modification Menu For Request ----------------");
-	 
-	  System.out.println("Enter the error number of the error would you like to simulate: \n");
-	  
-	  for (ErrorToSimulate.ErrorToSimulateType errorType: ErrorToSimulate.ErrorToSimulateType.values()) {
-		  System.out.println(errorType.getErrorNumber() + " : " + errorType.getErrorString());
-	  }
-	  
-	  System.out.println("---------------------------------------------------------------\n");
-	  
-	  
-	  // Get the requested error from the user
-	  int error =  Keyboard.getInteger();
-
-	  
-	  // Make sure it's a valid entry
-	  while(error > ErrorToSimulate.ErrorToSimulateType.values().length - 1  || error < 0){
-		  System.out.println("try again");
-		  error = Keyboard.getInteger();
-	  }
-	  
-	  // Set the type of error to simulate
-	  errorToSimulate = new ErrorToSimulate(error);
-	  
-	  if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_RQ_OPCODE) {
-		  
-		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 01 or 02)
-  	  System.out.print("   Enter first digit of desired opcode: ");
-    	 
-		  //Get requested first digit of opcode
-		  int firstOpcode = Keyboard.getInteger();
-	 
-		  while(firstOpcode > 9 || firstOpcode < 0 ){
-			  System.out.println("must be between 0 and 9\n");
-			  firstOpcode = Keyboard.getInteger();
-		  }
-		  
-  	  System.out.print("   Enter second digit of desired opcode: ");
-    	 
-		  //Get requested second digit of opcode
-		  int secondOpcode = Keyboard.getInteger();
-	 
-		  while(secondOpcode > 9 || secondOpcode < 0 ){
-			  System.out.println("must be between 0 and 9\n");
-			  secondOpcode = Keyboard.getInteger();
-		  }
-		  
-		  
-		  errorToSimulate.setOpcode(new byte[]{ (byte) firstOpcode, (byte) secondOpcode });
-		
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.EMPTY_FILENAME) {
-		  // Empty filename
-		  errorToSimulate.setFileName("");
-
-		  
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.EMPTY_MODE) {
-	      // Empty mode
-		  errorToSimulate.setMode("");
-
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_MODE) {
-		  System.out.println("Enter desired mode: ");
-		 
-		  // Get new mode from user
-		  String mode = Keyboard.getString();
-		  
-		  errorToSimulate.setMode(mode);
-		  
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_WRQ_PACKET) {
-      // Nothing to do here. No user input needed
-		  
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_OPCODE) {
-		  
-		  System.out.print("   Enter the number of the ACK packet you would like to change the opCode for (i.e. 1): ");
-		  targetPacketNumber = Keyboard.getInteger();
-				  
-		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 04)
-		  System.out.print("      Enter first digit of desired opcode: \n");
-		  
-		  //Get requested first digit of opcode
-		  int firstOpcode = Keyboard.getInteger();
-	 
-		  while(firstOpcode > 9 || firstOpcode < 0 ){
-			  System.out.println("must be between 0 and 9\n");
-			  firstOpcode = Keyboard.getInteger();
-		  }
-		  
-  	 System.out.print("      Enter second digit of desired opcode: \n");
-    	 
-		  //Get requested second digit of opcode
-		  int secondOpcode = Keyboard.getInteger();
-	 
-		  while(secondOpcode > 9 || secondOpcode < 0 ){
-			  System.out.println("must be between 0 and 9\n");
-			  secondOpcode = Keyboard.getInteger();
-		  }
-		  
-		  errorToSimulate.setOpcode(new byte[]{ (byte) firstOpcode, (byte) secondOpcode });
-		  
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_BLOCK_NUMBER) {
-		  
-		  System.out.print("   Enter the number of the ACK packet you would like to change the block number for (i.e. 1): ");
-		  targetPacketNumber = Keyboard.getInteger();
-		  
-		  //get input from the user of the block number they would like to use
-		  System.out.print("      Enter first digit of desired block number: \n");
-		  
-		  //Get first digit of requested new block number
-		  int firstBlockNumber = Keyboard.getInteger();
-		  
-		  while(firstBlockNumber > 9 || firstBlockNumber < 0){
-			  System.out.println("Must be between 0 and 9\n");
-			  firstBlockNumber = Keyboard.getInteger();
-		  }
-		  
-		  System.out.print("      Enter second digit of desired block number: \n");
-		  
-		  //Get second digit of requested new block number
-		  int secondBlockNumber = Keyboard.getInteger();
-		  
-		  while(secondBlockNumber > 9 || secondBlockNumber < 0){
-			  System.out.println("Must be between 0 and 9\n");
-			  secondBlockNumber = Keyboard.getInteger();
-		  }
-		  
-		  errorToSimulate.setBlockNumber(new byte[]{ (byte) firstBlockNumber, (byte) secondBlockNumber });
-
-		  
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_DATA_OPCODE) {
-		  
-		  System.out.print("   Enter the number of the DATA packet you would like to change the opCode for (i.e. 1): ");
-		  targetPacketNumber = Keyboard.getInteger();
-		  
-		  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 03)
-  	 System.out.print("      Enter first digit of desired opcode: \n");
-    	 
-		  //Get requested first digit of opcode
-		  int firstOpcode = Keyboard.getInteger();
-	 
-		  while(firstOpcode > 9 || firstOpcode < 0 ){
-			  System.out.println("must be between 0 and 9\n");
-			  firstOpcode = Keyboard.getInteger();
-		  }
-		  
-  	 System.out.print("      Enter second digit of desired opcode: \n");
-    	 
-		  //Get requested second digit of opcode
-		  int secondOpcode = Keyboard.getInteger();
-	 
-		  while(secondOpcode > 9 || secondOpcode < 0 ){
-			  System.out.println("must be between 0 and 9\n");
-			  secondOpcode = Keyboard.getInteger();
-		  }
-
-		  errorToSimulate.setOpcode(new byte[]{ (byte) firstOpcode, (byte) secondOpcode });
-		  
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_DATA_BLOCK_NUMBER) {
-		  
-		  System.out.print("   Enter the number of the DATA packet you would like to change the block number for (i.e. 1): ");
-		  targetPacketNumber = Keyboard.getInteger();
-		  
-		  //get input from the user of the block number they would like to use
-		  System.out.print("      Enter first digit of desired block number: \n");
-		  
-		  //Get first digit of requested new block number
-		  int firstBlockNumber = Keyboard.getInteger();
-		  
-		  while(firstBlockNumber > 9 || firstBlockNumber < 0){
-			  System.out.println("Must be between 0 and 9\n");
-			  firstBlockNumber = Keyboard.getInteger();
-		  }
-		  
-		  System.out.print("      Enter second digit of desired block number: \n");
-		  
-		  //Get second digit of requested new block number
-		  int secondBlockNumber = Keyboard.getInteger();
-		  
-		  while(secondBlockNumber > 9 || secondBlockNumber < 0){
-			  System.out.println("Must be between 0 and 9\n");
-			  secondBlockNumber = Keyboard.getInteger();
-		  }
-		  
-		  errorToSimulate.setBlockNumber(new byte[]{ (byte) firstBlockNumber, (byte) secondBlockNumber });
-		  
-		  
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LARGE_DATA_PACKET) {
-		  System.out.print("   Enter the number of the DATA packet you would like to make larger (i.e. 1): ");
-		  targetPacketNumber = Keyboard.getInteger();
-		  
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LOSE_PACKET) {
-	      System.out.println("   Choose the number corresponding to the type of packet you want to lose: ");
-			  
-	      System.out.println("     1 : RRQ");
-	      System.out.println("     2 : WRQ"); 
-	      System.out.println("     3 : ACK");
-	      System.out.println("     4 : DATA"); 
-	      
-	      int packetTypeInt = Keyboard.getInteger();
-	      
-		  while(packetTypeInt > 4 || packetTypeInt < 1){
-			  System.out.println("Invalid option. Try again: \n");
-			  packetTypeInt = Keyboard.getInteger();
-		  }
-		  
-		  if (packetTypeInt == 1) {
-			  errorToSimulate.setPacketType(PacketType.READ);
-		  } else if (packetTypeInt == 2) {
-			  errorToSimulate.setPacketType(PacketType.WRITE);
-		  } else if (packetTypeInt == 3) {
-			  errorToSimulate.setPacketType(PacketType.ACK);
-		  } else if (packetTypeInt == 4) {
-			  errorToSimulate.setPacketType(PacketType.DATA);
-		  }
-		  
-		  if (!errorToSimulate.getPacketType().equals(PacketType.READ) && !errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
-			  System.out.print("   Enter the number of the packet you want to lose (i.e. 1): ");
-		      targetPacketNumber = Keyboard.getInteger();
-		  } else {
-			  targetPacketNumber = 0;
-		  }
-		  
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DELAY_PACKET) {
-	      System.out.println("   Choose the number corresponding to the type of packet you want to delay: ");
-			  
-	      System.out.println("     1 : RRQ");
-	      System.out.println("     2 : WRQ"); 
-	      System.out.println("     3 : ACK");
-	      System.out.println("     4 : DATA"); 
-	      
-	      int packetTypeInt = Keyboard.getInteger();
-	      
-		  while(packetTypeInt > 4 || packetTypeInt < 1){
-			  System.out.println("Invalid option. Try again: \n");
-			  packetTypeInt = Keyboard.getInteger();
-		  }
-		  
-		  if (packetTypeInt == 1) {
-			  errorToSimulate.setPacketType(PacketType.READ);
-		  } else if (packetTypeInt == 2) {
-			  errorToSimulate.setPacketType(PacketType.WRITE);
-		  } else if (packetTypeInt == 3) {
-			  errorToSimulate.setPacketType(PacketType.ACK);
-		  } else if (packetTypeInt == 4) {
-			  errorToSimulate.setPacketType(PacketType.DATA);
-		  }
-		  
-		  if (!errorToSimulate.getPacketType().equals(PacketType.READ) && !errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
-			  System.out.print("   Enter the number of the packet you want to delay (i.e. 1): ");
-		      targetPacketNumber = Keyboard.getInteger();
-		  } else {
-			  targetPacketNumber = 0;
-		  }
-		  
-		  System.out.print("\n   Enter the delay (in milliseconds) for this packet: ");
-		  int delayBetweenDuplicates = Keyboard.getInteger();
-		  
-		  errorToSimulate.setDelayTime(delayBetweenDuplicates);
-		  
-		    
-	  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_PACKET) {
-	      System.out.println("   Choose the number corresponding to the type of packet you want to duplicate: ");
-			  
-	      System.out.println("     1 : RRQ");
-	      System.out.println("     2 : WRQ"); 
-	      System.out.println("     3 : ACK");
-	      System.out.println("     4 : DATA"); 
-	      
-	      int packetTypeInt = Keyboard.getInteger();
-	      
-		  while(packetTypeInt > 4 || packetTypeInt < 1){
-			  System.out.println("Invalid option. Try again: \n");
-			  packetTypeInt = Keyboard.getInteger();
-		  }
-		  
-		  if (packetTypeInt == 1) {
-			  errorToSimulate.setPacketType(PacketType.READ);
-		  } else if (packetTypeInt == 2) {
-			  errorToSimulate.setPacketType(PacketType.WRITE);
-		  } else if (packetTypeInt == 3) {
-			  errorToSimulate.setPacketType(PacketType.ACK);
-		  } else if (packetTypeInt == 4) {
-			  errorToSimulate.setPacketType(PacketType.DATA);
-		  }
-		  
-		  if (!errorToSimulate.getPacketType().equals(PacketType.READ) && !errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
-			  System.out.print("   Enter the number of the packet you want to duplicate (i.e. 1): ");
-		      targetPacketNumber = Keyboard.getInteger();
-		  } else {
-			  targetPacketNumber = 0;
-		  }
-		  
-		  System.out.print("\n   Enter the delay (in milliseconds) between the duplicate packets: ");
-		  int delayBetweenDuplicates = Keyboard.getInteger();
-		  
-		  errorToSimulate.setDelayTime(delayBetweenDuplicates);
-				    
-	  } else {
-		  // No error
-	  }
-  }
   
   private ErrorSimulator.PacketType getPacketType(DatagramPacket packet) throws InvalidPacketTypeException {
 	  byte[] data = packet.getData();
@@ -415,7 +115,15 @@ public class ErrorSimulatorRequest implements Runnable {
       System.out.println("Error Simulator: packet sent");
   }
 	  
-  public DatagramPacket receivePacket(DatagramSocket socket, int bufferLength) {
+  public DatagramPacket receivePacket(DatagramSocket socket, int bufferLength, int timeout) throws SocketTimeoutException {
+	  
+	  try {
+		  socket.setSoTimeout(timeout);
+	  } catch (SocketException se) {
+          se.printStackTrace();
+          System.exit(1);
+	  }
+	  
 	  // Construct a DatagramPacket for receiving packets
       byte dataBuffer[] = new byte[bufferLength];
       DatagramPacket receivedPacket = new DatagramPacket(dataBuffer, dataBuffer.length);
@@ -425,9 +133,10 @@ public class ErrorSimulatorRequest implements Runnable {
       try {        
           System.out.println("Waiting...");
           socket.receive(receivedPacket);
+      } catch (SocketTimeoutException te) {
+    	  throw te;
       } catch (IOException e) {
-          System.out.print("IO Exception: likely:");
-          System.out.println("Receive Socket Timed Out.\n" + e);
+          System.out.print("IO Exception: " + e);
           e.printStackTrace();
           System.exit(1);
       }
@@ -595,7 +304,11 @@ public class ErrorSimulatorRequest implements Runnable {
  	 	         		    // Send the packet
  	 	         		    sendPacket(tempSocket, sendAckPacket);
  	 	         		    
- 	 	         		    receivePacket(tempSocket, 517);
+ 	 	         		    try {
+ 	 	         		        receivePacket(tempSocket, 517, 0);	
+ 	 	         		    } catch (SocketTimeoutException e) {
+ 	 	         		    	
+ 	 	         		    }
  	 	         		    
  	 	         		    
  	 	         		    System.out.println("\n **** Resuming file transfer on original port ****");
@@ -617,7 +330,7 @@ public class ErrorSimulatorRequest implements Runnable {
  	     		}
  	     		
  	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_OPCODE) {
- 	     		if (packetType.equals(PacketType.ACK) && packetNumber == targetPacketNumber) {
+ 	     		if (packetType.equals(PacketType.ACK) && packetNumber == errorToSimulate.getTargetPacketNumber()) {
  	     			System.out.println("\n **** Modifying ACK Packet #" + packetNumber + "...Setting invalid opCode ****");
  	     			
  	     			// Modify the ACK packet opCode and return the packet
@@ -628,7 +341,7 @@ public class ErrorSimulatorRequest implements Runnable {
  	     		}
  	     		
  	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_BLOCK_NUMBER) {
- 	     		if (packetType.equals(PacketType.ACK) && packetNumber == targetPacketNumber) {
+ 	     		if (packetType.equals(PacketType.ACK) && packetNumber == errorToSimulate.getTargetPacketNumber()) {
  	     			System.out.println("\n **** Modifying ACK Packet #" + packetNumber + "...Setting invalid block number ****");
  	     			
  	     			// Modify the ACK packet block number and return the packet
@@ -639,7 +352,7 @@ public class ErrorSimulatorRequest implements Runnable {
  	     		}
  	     		
  	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_DATA_OPCODE) {
- 	     		if (packetType.equals(PacketType.DATA) && packetNumber == targetPacketNumber) {
+ 	     		if (packetType.equals(PacketType.DATA) && packetNumber == errorToSimulate.getTargetPacketNumber()) {
  	     			System.out.println("\n **** Modifying DATA Packet #" + packetNumber + "...Setting invalid opCode ****")
  	     			;
  	     			// Modify the DATA packet opCode and return the packet
@@ -650,7 +363,7 @@ public class ErrorSimulatorRequest implements Runnable {
  	     		}
  	     		
  	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_DATA_BLOCK_NUMBER) {
- 	     		if (packetType.equals(PacketType.DATA) && packetNumber == targetPacketNumber) {
+ 	     		if (packetType.equals(PacketType.DATA) && packetNumber == errorToSimulate.getTargetPacketNumber()) {
  	     			System.out.println("\n **** Modifying DATA Packet #" + packetNumber + "...Setting invalid block number ****");
  	     			
  	     			// Modify the DATA packet block number and return the packet
@@ -661,7 +374,7 @@ public class ErrorSimulatorRequest implements Runnable {
  	     		}
  	     		
  	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LARGE_DATA_PACKET) {
- 	     		if (packetType.equals(PacketType.DATA) && packetNumber == targetPacketNumber) {
+ 	     		if (packetType.equals(PacketType.DATA) && packetNumber == errorToSimulate.getTargetPacketNumber()) {
  	     			System.out.println("\n **** Modifying DATA Packet #" + packetNumber + "...Setting packet length larger than 516 bytes ****");
  	     			
  	     			makeDataPacketLarger(packet);
@@ -670,7 +383,7 @@ public class ErrorSimulatorRequest implements Runnable {
  	     			
  	     		}
  	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LOSE_PACKET) {
- 	     		if (packetType.equals(errorToSimulate.getPacketType()) && packetNumber == targetPacketNumber) {
+ 	     		if (packetType.equals(errorToSimulate.getPacketType()) && packetNumber == errorToSimulate.getTargetPacketNumber()) {
  	     			if (errorToSimulate.getPacketType().equals(PacketType.READ)) {
  	     				System.out.println("\n **** Losing RRQ Packet ***"); 
  	     			} else if (errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
@@ -686,7 +399,7 @@ public class ErrorSimulatorRequest implements Runnable {
  	     			sendThePacket = false;
  	     		}
  	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DELAY_PACKET) {
- 	     		if (packetType.equals(errorToSimulate.getPacketType()) && packetNumber == targetPacketNumber) {
+ 	     		if (packetType.equals(errorToSimulate.getPacketType()) && packetNumber == errorToSimulate.getTargetPacketNumber()) {
  	     			if (errorToSimulate.getPacketType().equals(PacketType.READ)) {
  	     				System.out.println("\n **** Delaying RRQ Packet ***"); 
  	     			} else if (errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
@@ -708,7 +421,7 @@ public class ErrorSimulatorRequest implements Runnable {
 
  	     		}
  	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_PACKET) {
- 	     		if (packetType.equals(errorToSimulate.getPacketType()) && packetNumber == targetPacketNumber) {
+ 	     		if (packetType.equals(errorToSimulate.getPacketType()) && packetNumber == errorToSimulate.getTargetPacketNumber()) {
  	     			if (errorToSimulate.getPacketType().equals(PacketType.READ)) {
  	     				System.out.println("\n **** Duplicating RRQ Packet ***"); 
  	     			} else if (errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
@@ -759,16 +472,17 @@ public class ErrorSimulatorRequest implements Runnable {
       // Construct a datagram packet to send to the Server
       sendPacket = new DatagramPacket(requestPacket.getData(), requestPacket.getLength(), serverAddress, ErrorSimulator.SERVER_PORT);
       
-      // Show the menu UI for error simulation
-      userMenu();
-      
       // If the user selects an option that simulates an error for a RRQ/WRQ packet then the simulatError method will simulate that error 
       // and send the packet to the server, otherwise the simulateError method will send the original unmodified request packet
       simulateErrorAndSendPacket(sendPacket, 0);
       
       
       // Receive the first packet from the server
-      receivePacket = receivePacket(sendReceiveSocket, 517);
+      try {
+          receivePacket = receivePacket(sendReceiveSocket, 517, 0);
+      } catch (SocketTimeoutException e) {
+    	  
+      }
      
       this.serverRequestThreadPort = receivePacket.getPort();
       
@@ -781,6 +495,9 @@ public class ErrorSimulatorRequest implements Runnable {
       
       
       while (true) {
+    	  if (Thread.currentThread().isInterrupted()) {
+    		  return;
+    	  }
     	  receiveAndSendPackets();
       }
     
@@ -789,7 +506,15 @@ public class ErrorSimulatorRequest implements Runnable {
   
   private void receiveAndSendPackets() {
 	  // Receive a packet
-	  receivePacket = receivePacket(sendReceiveSocket, 517);
+	  try {
+		  receivePacket = receivePacket(sendReceiveSocket, 517, RECEIVE_TIMOUT_BEFORE_CLOSING_THREAD);
+	  } catch (SocketTimeoutException e) {
+		  // No packet has been received within the time specified...Close thread
+		  System.out.println("\n **** Error Sim Request Finished...Closing Error Sim Thread # " + Thread.currentThread().getId() + " ****\n");
+		  sendReceiveSocket.close();
+		  Thread.currentThread().interrupt();
+		  return;
+	  }
 	  
 	  InetAddress destinationAddress;
 	  int destinationPort;

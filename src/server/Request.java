@@ -12,11 +12,13 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import client.IllegalTftpOperationException;
+import client.PacketAlreadyReceivedException;
 import client.UnknownTransferIdException;
 import server.Server.ErrorType;
 import server.Server.PacketAction;
@@ -38,6 +40,8 @@ public class Request implements Runnable {
 		
 	    try {
 	    	sendReceiveSocket = new DatagramSocket();
+	    	
+	    	sendReceiveSocket.setSoTimeout(500);
         } catch (SocketException se) {
             se.printStackTrace();
             System.exit(1);
@@ -90,6 +94,7 @@ public class Request implements Runnable {
 	}
 	
 	
+	
 	public void sendPacket(DatagramSocket socket, DatagramPacket packet) {
 		printPacketInfo(packet, PacketAction.SEND);
 
@@ -103,7 +108,8 @@ public class Request implements Runnable {
 		System.out.println("Server: packet sent");
 	}
 	  
-	public DatagramPacket receivePacket(DatagramSocket socket, int bufferLength) {
+	public DatagramPacket receivePacket(DatagramSocket socket, int bufferLength) throws SocketTimeoutException {
+		  
 		// Construct a DatagramPacket for receiving packets
 		byte dataBuffer[] = new byte[bufferLength];
       	DatagramPacket receivedPacket = new DatagramPacket(dataBuffer, dataBuffer.length);
@@ -113,9 +119,12 @@ public class Request implements Runnable {
       	try {        
           	System.out.println("Waiting...");
           	socket.receive(receivedPacket);
+          	
+      	} catch (SocketTimeoutException te) {
+   	    	  throw te;
+   	    	  
       	} catch (IOException e) {
-    	  	System.out.print("IO Exception: likely:");
-          	System.out.println("Receive Socket Timed Out.\n" + e);
+    	  	System.out.print("IO Exception: " + e);
           	e.printStackTrace();
           	System.exit(1);
       	}
@@ -226,6 +235,10 @@ public class Request implements Runnable {
 		return buffer.array();
 	}
 	
+	private short getBlockNumberAsShort(byte[] blockNumber) {
+		return ByteBuffer.wrap(blockNumber).getShort();
+	}
+	
 	private DatagramPacket formACKPacket(InetAddress address, int port, byte[] blockNumber) throws UnknownHostException {
 		byte[] ackData = new byte[4];
 		ackData[0] = 0;
@@ -282,7 +295,7 @@ public class Request implements Runnable {
 	
 	
 	private void validateAckPacket(DatagramPacket packet, byte[] expectedBlockNumber, int expectedPort) 
-			throws IllegalTftpOperationException, UnknownTransferIdException {
+			throws IllegalTftpOperationException, UnknownTransferIdException, PacketAlreadyReceivedException {
 		
 		// Make sure the address and port the packet is coming from is the same
 		if (packet.getAddress().equals(clientAddress) && packet.getPort() == expectedPort) {
@@ -290,16 +303,27 @@ public class Request implements Runnable {
 			byte[] data = packet.getData();
 			
 			if (data[0] == 0 && data[1] == PacketType.ACK.getOpcode()) {
-				if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
-					
-					// Check to make sure the ACK packet is exactly 4 bytes
-					for (int i = data.length - 1; i > 4; i--) {
-						if (data[i] != 0) {
-							throw new IllegalTftpOperationException("ACK packet is too long. Should be 4 bytes");
-						}
+				
+				// Check to make sure the ACK packet is exactly 4 bytes
+				for (int i = data.length - 1; i > 4; i--) {
+					if (data[i] != 0) {
+						throw new IllegalTftpOperationException("ACK packet is too long. Should be 4 bytes");
 					}
+				}
+				
+				// Check to make sure the block number is valid 
+				
+				short packetBlockNumberShort   = getBlockNumberAsShort(new byte[]{ data[2], data[3]});
+				short expectedBlockNumberShort = getBlockNumberAsShort(expectedBlockNumber);
+				
+				if (packetBlockNumberShort == expectedBlockNumberShort) {
+					// The ACK is valid and it is the exact ACK that we are expecting
+					return;
 					
-					
+				} else if (packetBlockNumberShort < expectedBlockNumberShort) {
+					// The ACK was already received beforehand
+					throw new PacketAlreadyReceivedException("ACK packet with block number " + packetBlockNumberShort + 
+							" was already received");
 				} else {
 					throw new IllegalTftpOperationException("Invalid block number. "
 							+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
@@ -384,23 +408,7 @@ public class Request implements Runnable {
 		return new DatagramPacket(errorPacket, errorPacket.length, address, port);
 	}
 	
-	
-	private boolean packetContainsErrorThatRequiresThreadInterruption(DatagramPacket packet) {
-		byte[] data = packet.getData();
-		
-		// Check if the packet is an error packet to begin with
-		if (data[0] == 0 && data[1] == PacketType.ERROR.getOpcode()) {
-			
-			// Check if the error is an illegal TFTP operation
-			if (data[2] == 0 && data[3] == ErrorType.ILLEGAL_TFTP_OPERATION.getErrorCode()) {
-				return true;
-			}
-			
-		}
-		
-		return false;
-	}
-	
+
 	
 
 	private void processReadRequest() {
@@ -430,62 +438,105 @@ public class Request implements Runnable {
 	    	    sendPacket(sendReceiveSocket, sendDataPacket);
 	    	    
 	    	    // Wait to receive a packet
-	    	    receivePacket = receivePacket(sendReceiveSocket, 517);
-	    	        
+            	try {
+ 		    	   // Attempt to receive a packet
+ 		    	   receivePacket = receivePacket(sendReceiveSocket, 517);
+ 		    	   
+            	} catch (SocketTimeoutException firstTimeoutException) {
+            		// Resend the DATA packet
+            		System.out.println("\n*** Socket Timout...Resending DATA packet ***");
+            		sendPacket(sendReceiveSocket, sendDataPacket);
+            		
+            		try {
+	            		// Attempt to receive a packet for the second time
+	            		receivePacket = receivePacket(sendReceiveSocket, 517);
+	            		
+            		} catch (SocketTimeoutException secondTimoutException) {
+            			System.out.println("\n ****** Client Unreachable...Closing Thread ******");
+            			in.close();
+            			Thread.currentThread().interrupt();
+            			return;
+            		}
+            	}
+
 	    	    
-			    // Check if the packet received is an error which requires thread interruption
-			    if (packetContainsErrorThatRequiresThreadInterruption(receivePacket)) {
-			    	System.out.print("\n*** Received error packet that requires thread interruption. CLosing thread " + Thread.currentThread().getId() + "...\n");
-			    	
-			    	in.close();
-			    	Thread.currentThread().interrupt();
-			    	return;
-			    }
-	    	
-	    	    
-	    	    // Validate the ACK packet
 	    	    try {
-	    	    	validateAckPacket(receivePacket, blockNumber, connectionPort);
+	    	    	PacketType packetType = getPacketType(receivePacket);
 	    	    	
-	    	    } catch (IllegalTftpOperationException illegalOperationException) {
-	    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
-	    	    	System.out.println("Sending error packet...");
+	    	    	if (packetType.equals(PacketType.ACK)) {
+	    	    	    // Validate the ACK packet
+	    	    	    try {
+	    	    	    	validateAckPacket(receivePacket, blockNumber, connectionPort);
+	    	    	    	
+		                    // ACK packet has been validated so we increment the block number now
+		    	    	    blockNumber = incrementBlockNumber(blockNumber);
+	    	    	    	
+	    	    	    } catch (IllegalTftpOperationException illegalOperationException) {
+	    	    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
+	    	    	    	System.out.println("Sending error packet...");
+	    	    	    	
+	    	    	    	// Form the error packet
+	    	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+	    	            			receivePacket.getPort(), 
+	    	            			ErrorType.ILLEGAL_TFTP_OPERATION, 
+	    	            			illegalOperationException.getMessage());
+	    	            	
+	    	    		    
+	    		    	    // Send the error packet
+	    		    	    sendPacket(sendReceiveSocket, sendErrorPacket);
+	    	    	    	
+	    	    		    // Close the thread
+	    		    	    System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+	    		    	    in.close();
+	    	    	    	Thread.currentThread().interrupt();
+	    	    	    	return;
+	    	    	    	
+	    	    	    	
+	    	    	    } catch(UnknownTransferIdException unknownTransferIdException) {
+	    	    	    	System.out.println("UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
+	    	    	    	System.out.println("Sending error packet...");
+	    	    	    	
+	    	    	    	// Form the error packet
+	    	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+	    	            			receivePacket.getPort(), 
+	    	            			ErrorType.UNKNOWN_TRANSFER_ID, 
+	    	            			unknownTransferIdException.getMessage());
+	    	            	
+	    		    	    // Send the error packet
+	    		    	    sendPacket(sendReceiveSocket, sendErrorPacket);
+	    	    	    	
+	    	    	    } catch (PacketAlreadyReceivedException alreadyReceivedException) {
+	    	    	    	// Ignore this packet
+	    	    	    	System.out.println("\n*** The received ACK packet was already received beforehand...Ignoring it... *** \n");
+	    	    	    	continue;
+	    	    	    }
+	    	    	      
+	    	    	} else if (packetType.equals(PacketType.ERROR)) {
+	    				System.out.println("\n*** Received error packet...Closing Thread...***");
+	    				in.close();
+	    				Thread.currentThread().interrupt();
+	    				return;
+	    	    	}
 	    	    	
-	    	    	// Form the error packet
-	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
-	            			receivePacket.getPort(), 
-	            			ErrorType.ILLEGAL_TFTP_OPERATION, 
-	            			illegalOperationException.getMessage());
-	            	
-	    		    
-		    	    // Send the error packet
-		    	    sendPacket(sendReceiveSocket, sendErrorPacket);
-	    	    	
-	    		    // Close the thread
-		    	    System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
-		    	    in.close();
-	    	    	Thread.currentThread().interrupt();
-	    	    	return;
-	    	    	
-	    	    	
-	    	    } catch(UnknownTransferIdException unknownTransferIdException) {
-	    	    	System.out.println("UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
-	    	    	System.out.println("Sending error packet...");
-	    	    	
-	    	    	// Form the error packet
-	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
-	            			receivePacket.getPort(), 
-	            			ErrorType.UNKNOWN_TRANSFER_ID, 
-	            			unknownTransferIdException.getMessage());
-	            	
-		    	    // Send the error packet
-		    	    sendPacket(sendReceiveSocket, sendErrorPacket);
-	    	    	
+	    	    } catch (InvalidPacketTypeException e) {
+    		    	System.out.println("\n*** Received Packet with invalid opCode ***");
+    		    	// send error for invalid opcode
+        	    	System.out.println("Sending error packet...");
+        	    	
+        	    	// Form the error packet
+                	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+                			receivePacket.getPort(), 
+                			ErrorType.ILLEGAL_TFTP_OPERATION, 
+                			"Invalid opCode");
+                	
+                	// Send the error packet
+                	sendPacket(sendReceiveSocket, sendErrorPacket);
+        		    
+                	in.close();
+    				Thread.currentThread().interrupt();
+    				return;
 	    	    }
-	    	    
-	    	        
-                // ACK packet has been validated so we increment the block number now
-	    	    blockNumber = incrementBlockNumber(blockNumber);
+
 	   
 	        }
 	        
@@ -548,64 +599,83 @@ public class Request implements Runnable {
 			    receivePacket = receivePacket(sendReceiveSocket, 517);
 			    
 			    
-			    // Check if the packet received is an error which requires thread interruption
-			    if (packetContainsErrorThatRequiresThreadInterruption(receivePacket)) {
-			    	System.out.print("\n*** Received error packet that requires thread interruption. CLosing thread " + Thread.currentThread().getId() + "...\n");
-			    	
-			    	out.close();
-			    	Thread.currentThread().interrupt();
-			    	return;
-			    }
-			    
-			    removeTrailingZeroBytesFromDataPacket(receivePacket);
-			    
-			    
-			    // Validate the DATA packet
 			    try {
-			    	validateDataPacket(receivePacket, blockNumber, connectionPort);
+			    	PacketType packetType = getPacketType(receivePacket);
 			    	
-	    	    } catch (IllegalTftpOperationException illegalOperationException) {
-	    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
-	    	    	System.out.println("Sending error packet...");
-	    	    	
-	    	    	// Form the error packet
-	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
-	            			receivePacket.getPort(), 
-	            			ErrorType.ILLEGAL_TFTP_OPERATION, 
-	            			illegalOperationException.getMessage());
-	            	
-		    	    // Send the error packet
-		    	    sendPacket(sendReceiveSocket, sendErrorPacket);
-	    	    	
-	    		    // Close the thread
-		    	    System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
-	    	    	
-		    	    out.close();
-		    	    Thread.currentThread().interrupt();
-	    	    	return;
-	    	    	
-	    	    	
-	    	    } catch(UnknownTransferIdException unknownTransferIdException) {
-	    	    	System.out.println("UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
-	    	    	System.out.println("Sending error packet...");
-	    	    	
-	    	    	// Form the error packet
-	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
-	            			receivePacket.getPort(), 
-	            			ErrorType.UNKNOWN_TRANSFER_ID, 
-	            			unknownTransferIdException.getMessage());
-	            	
-		    	    // Send the error packet
-		    	    sendPacket(sendReceiveSocket, sendErrorPacket);
-	    	    	
+			    	if (packetType.equals(PacketType.DATA)) {
+					    // Validate the DATA packet
+					    try {
+					    	validateDataPacket(receivePacket, blockNumber, connectionPort);
+					    	
+						    // Update the length of the file data
+						    dataLength = getFileDataFromDataPacket(receivePacket).length;
+						    
+						    // Write to file
+						    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
+					    	
+			    	    } catch (IllegalTftpOperationException illegalOperationException) {
+			    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
+			    	    	System.out.println("Sending error packet...");
+			    	    	
+			    	    	// Form the error packet
+			            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+			            			receivePacket.getPort(), 
+			            			ErrorType.ILLEGAL_TFTP_OPERATION, 
+			            			illegalOperationException.getMessage());
+			            	
+				    	    // Send the error packet
+				    	    sendPacket(sendReceiveSocket, sendErrorPacket);
+			    	    	
+			    		    // Close the thread
+				    	    System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+			    	    	
+				    	    out.close();
+				    	    Thread.currentThread().interrupt();
+			    	    	return;
+			    	    	
+			    	    	
+			    	    } catch(UnknownTransferIdException unknownTransferIdException) {
+			    	    	System.out.println("UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
+			    	    	System.out.println("Sending error packet...");
+			    	    	
+			    	    	// Form the error packet
+			            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+			            			receivePacket.getPort(), 
+			            			ErrorType.UNKNOWN_TRANSFER_ID, 
+			            			unknownTransferIdException.getMessage());
+			            	
+				    	    // Send the error packet
+				    	    sendPacket(sendReceiveSocket, sendErrorPacket);
+			    	    	
+			    	    }
+					    
+			    	} else if (packetType.equals(PacketType.ERROR)) {
+	    				System.out.println("\n*** Received error packet...Closing Thread...***");
+	    				out.close();
+	    				Thread.currentThread().interrupt();
+	    				return;
+			    	}
+			    	
+			    } catch (InvalidPacketTypeException e) {
+    		    	System.out.println("\n*** Received Packet with invalid opCode ***");
+    		    	// send error for invalid opcode
+        	    	System.out.println("Sending error packet...");
+        	    	
+        	    	// Form the error packet
+                	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+                			receivePacket.getPort(), 
+                			ErrorType.ILLEGAL_TFTP_OPERATION, 
+                			"Invalid opCode");
+                	
+                	// Send the error packet
+                	sendPacket(sendReceiveSocket, sendErrorPacket);
+        		    
+                	out.close();
+    				Thread.currentThread().interrupt();
+    				return;
 	    	    }
 			    
-			    // Update the length of the file data
-			    dataLength = getFileDataFromDataPacket(receivePacket).length;
-			    
-			    // Write to file
-			    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
-			    
+    
 		    	
 		    } while(dataLength == 512);
 		    

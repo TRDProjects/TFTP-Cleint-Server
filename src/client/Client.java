@@ -12,6 +12,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -76,6 +77,8 @@ public class Client {
 		
 	    try {
 	        sendReceiveSocket = new DatagramSocket();
+	        
+	        sendReceiveSocket.setSoTimeout(500);
 	        
 			serverAddress = InetAddress.getLocalHost();
 	  
@@ -145,7 +148,8 @@ public class Client {
 	      System.out.println("Client: packet sent");
 	  }
 		  
-	  public DatagramPacket receivePacket(DatagramSocket socket, int bufferLength) {
+	  public DatagramPacket receivePacket(DatagramSocket socket, int bufferLength) throws SocketTimeoutException {
+		 
 		  // Construct a DatagramPacket for receiving packets
 	      byte dataBuffer[] = new byte[bufferLength];
 	      DatagramPacket receivedPacket = new DatagramPacket(dataBuffer, dataBuffer.length);
@@ -155,9 +159,10 @@ public class Client {
 	      try {        
 	          System.out.println("Waiting...");
 	          socket.receive(receivedPacket);
+	      } catch (SocketTimeoutException te) {
+	    	  throw te;
 	      } catch (IOException e) {
-	          System.out.print("IO Exception: likely:");
-	          System.out.println("Receive Socket Timed Out.\n" + e);
+	          System.out.print("IO Exception: " + e);
 	          e.printStackTrace();
 	          System.exit(1);
 	      }
@@ -242,7 +247,7 @@ public class Client {
 	
 	
 	private void validateAckPacket(DatagramPacket packet, byte[] expectedBlockNumber, int expectedPort) 
-			throws IllegalTftpOperationException, UnknownTransferIdException {
+			throws IllegalTftpOperationException, UnknownTransferIdException, PacketAlreadyReceivedException {
 		
 		// Make sure the address and port the packet is coming from is the same
 		if (packet.getAddress().equals(serverAddress) && packet.getPort() == expectedPort) {
@@ -250,16 +255,27 @@ public class Client {
 			byte[] data = packet.getData();
 			
 			if (data[0] == 0 && data[1] == PacketType.ACK.getOpcode()) {
-				if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
-					
-					// Check to make sure the ACK packet is exactly 4 bytes
-					for (int i = data.length - 1; i > 4; i--) {
-						if (data[i] != 0) {
-							throw new IllegalTftpOperationException("ACK packet is too long. Should be 4 bytes");
-						}
+				
+				// Check to make sure the ACK packet is exactly 4 bytes
+				for (int i = data.length - 1; i > 4; i--) {
+					if (data[i] != 0) {
+						throw new IllegalTftpOperationException("ACK packet is too long. Should be 4 bytes");
 					}
-						
+				}
+				
+				// Check to make sure the block number is valid 
+				
+				short packetBlockNumberShort   = getBlockNumberAsShort(new byte[]{ data[2], data[3]});
+				short expectedBlockNumberShort = getBlockNumberAsShort(expectedBlockNumber);
+				
+				if (packetBlockNumberShort == expectedBlockNumberShort) {
+					// The ACK is valid and it is the exact ACK that we are expecting
+					return;
 					
+				} else if (packetBlockNumberShort < expectedBlockNumberShort) {
+					// The ACK was already received beforehand
+					throw new PacketAlreadyReceivedException("ACK packet with block number " + packetBlockNumberShort + 
+							" was already received");
 				} else {
 					throw new IllegalTftpOperationException("Invalid block number. "
 							+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
@@ -360,6 +376,12 @@ public class Client {
 		return null;
 	}
 	
+	
+	private short getBlockNumberAsShort(byte[] blockNumber) {
+		return ByteBuffer.wrap(blockNumber).getShort();
+	}
+	
+	
 	private void sendFile(DatagramPacket packet, String fileName) {
 		int connectionPort = packet.getPort();
 		
@@ -375,6 +397,7 @@ public class Client {
     	    try {
     	    	validateAckPacket(packet, blockNumber, connectionPort);
     	    	
+
     	    } catch (IllegalTftpOperationException illegalOperationException) {
     	    	System.out.println("IllegalTftpOperationException: " + illegalOperationException.getMessage());
     	    	System.out.println("Sending error packet...");
@@ -407,6 +430,9 @@ public class Client {
             	// Send the error packet
             	sendPacket(sendReceiveSocket, sendErrorPacket);
     	    	
+            	
+    	    } catch (PacketAlreadyReceivedException alreadyReceivedException) {
+    	    	// This is the first ACK so it can't have already been received before. Do nothing...
     	    }
     	    
             // First ACK packet has been validated so we increment the block number now to 01
@@ -431,8 +457,25 @@ public class Client {
 
 	            do {
 	        	   
-		    	   // Receive the packet
-		    	   receivePacket = receivePacket(sendReceiveSocket, 517);
+	            	try {
+	 		    	   // Attempt to receive a packet
+	 		    	   receivePacket = receivePacket(sendReceiveSocket, 517);
+	 		    	   
+	            	} catch (SocketTimeoutException firstTimeoutException) {
+	            		// Resend the DATA packet
+	            		System.out.println("\n*** Socket Timout...Resending DATA packet ***");
+	            		sendPacket(sendReceiveSocket, sendDataPacket);
+	            		
+	            		try {
+		            		// Attempt to receive a packet for the second time
+		            		receivePacket = receivePacket(sendReceiveSocket, 517);
+		            		
+	            		} catch (SocketTimeoutException secondTimoutException) {
+	            			System.out.println("\n ****** Server Unreachable...Ending This Session ******");
+	            			in.close();
+	            			return;
+	            		}
+	            	}
 		    	    		    
 		    	    
 		    	    try {
@@ -479,6 +522,10 @@ public class Client {
 		    	            	// Send the error packet
 		    	            	sendPacket(sendReceiveSocket, sendErrorPacket);
 		    	    	    	
+		    	    	    } catch (PacketAlreadyReceivedException alreadyReceivedException) {
+		    	    	    	// Ignore this packet
+		    	    	    	System.out.println("\n*** The received ACK packet was already received beforehand...Ignoring it... *** \n");
+		    	    	    	continue;
 		    	    	    }
 		    	    	    
 		    	    	        
@@ -543,11 +590,13 @@ public class Client {
 		byte[] blockNumber = {0,1};
 		int dataLength = getFileDataFromDataPacket(receivePacket).length;
 	
+		boolean notDataPacket = false;
 
     	try {
     		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("src/client/files/" + fileName));
     			
     	    do {
+    	    	
 	    		
     		    try {
     		    	PacketType packetType = getPacketType(receivePacket);
@@ -556,6 +605,36 @@ public class Client {
     				    // Validate the DATA packet
     				    try {
     				    	validateDataPacket(receivePacket, blockNumber, connectionPort);
+    				    	
+    					    // Write to file
+    					    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
+    		    		    
+    		    		    
+    		    			// Construct an ACK packet
+    		    		    try {
+    		    		    	sendPacket = formACKPacket(receivePacket.getAddress(), receivePacket.getPort(), blockNumber);
+    		    		    } catch (UnknownHostException e) {
+    		    		    	out.close();
+    		    		        e.printStackTrace();
+    		    		        System.exit(1);
+    		    		    }
+    		    		    
+    		    		    // Send the ACK packet
+    		    		    sendPacket(sendReceiveSocket, sendPacket);
+    		    		    
+    		    			
+    		    		    // Increment the block number
+    		    		    blockNumber = incrementBlockNumber(blockNumber);
+    		    		    
+    		    		    // Wait to receive a packet back from the server
+    		    		    receivePacket = receivePacket(sendReceiveSocket, 517);
+    		    		    
+    		    		    // Update the length of the file data
+    		    		    dataLength = getFileDataFromDataPacket(receivePacket).length;
+    		    		    
+    		    		    if (!getPacketType(receivePacket).equals(PacketType.DATA)) {
+    		    		    	notDataPacket = true;
+    		    		    }
     				    	
     		    	    } catch (IllegalTftpOperationException illegalOperationException) {
     		    	    	System.out.println("IllegalTftpOperationException: " + illegalOperationException.getMessage());
@@ -624,37 +703,9 @@ public class Client {
     				
     				return;
     		    }
-    		    
-    		    
-			    // Write to file
-			    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
-    		    
-    		    
-    			// Construct an ACK packet
-    		    try {
-    		    	sendPacket = formACKPacket(receivePacket.getAddress(), receivePacket.getPort(), blockNumber);
-    		    } catch (UnknownHostException e) {
-    		    	out.close();
-    		        e.printStackTrace();
-    		        System.exit(1);
-    		    }
-    		    
-    		    // Send the ACK packet
-    		    sendPacket(sendReceiveSocket, sendPacket);
-    		    
-    			
-    		    // Increment the block number
-    		    blockNumber = incrementBlockNumber(blockNumber);
-    		    
-    		    // Wait to receive a packet back from the server
-    		    receivePacket = receivePacket(sendReceiveSocket, 517);
-    		    
-    		    
-    		    // Update the length of the file data
-    		    dataLength = getFileDataFromDataPacket(receivePacket).length;
-    		    
+
     	    	
-    	    } while(dataLength == 512);
+    	    } while(dataLength == 512 || notDataPacket);
     	    
     	    
 		    // Write the data from the last DATA packet to file
@@ -743,7 +794,22 @@ public class Client {
 	    
     	
     	// Wait to receive a packet from the server
-    	receivePacket = receivePacket(sendReceiveSocket, 517);
+    	try {
+        	receivePacket = receivePacket(sendReceiveSocket, 517);
+    	} catch (SocketTimeoutException firstSocketTimeoutException) {
+    		System.out.println("\n *** Socket Timeout #1...Sending another request packet... ***");
+
+        	// Send another RRQ/WRQ packet
+        	sendPacket(sendReceiveSocket, sendPacket);
+        	
+        	try {
+        		receivePacket = receivePacket(sendReceiveSocket, 517);
+        	} catch (SocketTimeoutException secondSocketTimeoutException) {
+        		System.out.println("\n *** Socket Timeout #2... ***");
+        		System.out.println("\n ***** Server Unreachable...Ending session... *****\n");
+        		return;
+        	}
+    	}
 
 	    
 	    try {
