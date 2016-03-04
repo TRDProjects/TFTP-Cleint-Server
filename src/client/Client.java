@@ -23,6 +23,8 @@ import util.Keyboard;
 
 public class Client {
 	
+	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
+	
 	
 	public static enum Mode { 
 		NORMAL, TEST 
@@ -77,9 +79,7 @@ public class Client {
 		
 	    try {
 	        sendReceiveSocket = new DatagramSocket();
-	        
-	        sendReceiveSocket.setSoTimeout(2000);
-	        
+
 			serverAddress = InetAddress.getLocalHost();
 	  
 	    } catch (SocketException se) {
@@ -394,6 +394,14 @@ public class Client {
 	private void sendFile(DatagramPacket packet, String fileName) {
 		int connectionPort = packet.getPort();
 		
+		// Since the client will be sending the DATA packets, we set a timeout on the socket
+		try {
+		    sendReceiveSocket.setSoTimeout(PACKET_RETRANSMISSION_TIMEOUT);
+		} catch (SocketException se) {
+	    	se.printStackTrace();
+	        System.exit(1);
+		}
+		
 	    // Send data to be written to server
     	try {
         	BufferedInputStream in = new BufferedInputStream(new FileInputStream("src/client/files/" + fileName));
@@ -600,6 +608,15 @@ public class Client {
 		int dataLength = getFileDataFromDataPacket(receivePacket).length;
 	
 		boolean notDataPacket = false;
+		
+		// Since the server will be sending the DATA packets, no timeout on the socket is needed
+		try {
+			// Set the timeout to 0 (infinite)
+		    sendReceiveSocket.setSoTimeout(0);
+		} catch (SocketException se) {
+	    	se.printStackTrace();
+	        System.exit(1);
+		}
 
     	try {
     		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("src/client/files/" + fileName));
@@ -772,6 +789,14 @@ public class Client {
 	
 	public void sendAndReceive(PacketType type, String mode, String fileName) {
 		
+		// Set a timeout on the socket
+		try {
+		    sendReceiveSocket.setSoTimeout(PACKET_RETRANSMISSION_TIMEOUT);
+		} catch (SocketException se) {
+	    	se.printStackTrace();
+	        System.exit(1);
+		}
+		
         byte fileNameInBytes[] = fileName.getBytes();
 		byte modeInBytes[] = mode.getBytes();
 		
@@ -828,7 +853,7 @@ public class Client {
     	try {
         	receivePacket = receivePacket(sendReceiveSocket, 517);
     	} catch (SocketTimeoutException firstSocketTimeoutException) {
-    		System.out.println("\n *** Socket Timeout #1...Sending another request packet... ***");
+    		System.out.println("\n *** Socket Timeout...Sending another request packet... ***");
 
         	// Send another RRQ/WRQ packet
         	sendPacket(sendReceiveSocket, sendPacket);
@@ -836,7 +861,7 @@ public class Client {
         	try {
         		receivePacket = receivePacket(sendReceiveSocket, 517);
         	} catch (SocketTimeoutException secondSocketTimeoutException) {
-        		System.out.println("\n *** Socket Timeout #2... ***");
+        		System.out.println("\n *** Socket Timeout... ***");
         		System.out.println("\n ***** Server Unreachable...Ending session... *****\n");
         		return;
         	}

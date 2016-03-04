@@ -26,6 +26,8 @@ import server.Server.PacketType;
 
 public class Request implements Runnable {
 	
+	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
+	
 	private DatagramSocket sendReceiveSocket;
 	private DatagramPacket requestPacket, sendPacket, receivePacket;
 	
@@ -424,11 +426,17 @@ public class Request implements Runnable {
 		System.out.println("Server (" + Thread.currentThread() + "): processing READ request");
 		
     	int connectionPort = requestPacket.getPort();
-    	
         byte[] dataFromFile = new byte[512];
         int n;
-        
         byte[] blockNumber = {0, 1};
+        
+		// Since the server will be sending the DATA packets, we set a timeout on the socket
+		try {
+		    sendReceiveSocket.setSoTimeout(PACKET_RETRANSMISSION_TIMEOUT);
+		} catch (SocketException se) {
+	    	se.printStackTrace();
+	        System.exit(1);
+		}
 		
     	try {
         	BufferedInputStream in = new BufferedInputStream(new FileInputStream("src/server/files/" + fileName));
@@ -580,6 +588,15 @@ public class Request implements Runnable {
 		
 		byte[] blockNumber = {0,0};
 		int dataLength = 512;
+		
+		// Since the client will be sending the DATA packets, no timeout on the socket is needed
+		try {
+			// Set the timeout to 0 (infinite)
+		    sendReceiveSocket.setSoTimeout(0);
+		} catch (SocketException se) {
+	    	se.printStackTrace();
+	        System.exit(1);
+		}
 	    
 	    // Initialize the write file
 	    try {

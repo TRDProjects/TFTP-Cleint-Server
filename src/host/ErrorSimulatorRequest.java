@@ -15,7 +15,7 @@ import java.util.Arrays;
 
 public class ErrorSimulatorRequest implements Runnable {
 	
-  public static final int RECEIVE_TIMOUT_BEFORE_CLOSING_THREAD = 5000;
+  public static final int RECEIVE_TIMOUT_BEFORE_CLOSING_THREAD = 2000;
 	 
   private DatagramPacket receivePacket, sendPacket;
 	      
