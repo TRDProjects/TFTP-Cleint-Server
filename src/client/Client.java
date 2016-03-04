@@ -78,7 +78,7 @@ public class Client {
 	    try {
 	        sendReceiveSocket = new DatagramSocket();
 	        
-	        sendReceiveSocket.setSoTimeout(500);
+	        sendReceiveSocket.setSoTimeout(2000);
 	        
 			serverAddress = InetAddress.getLocalHost();
 	  
@@ -636,7 +636,8 @@ public class Client {
     		    		    blockNumber = incrementBlockNumber(blockNumber);
     		    		    
     		    		    // Wait to receive a packet back from the server
-    		    		    receivePacket = receivePacket(sendReceiveSocket, 517);
+        		    		receivePacket = receivePacket(sendReceiveSocket, 517);
+
     		    		    
     		    		    // Update the length of the file data
     		    		    dataLength = getFileDataFromDataPacket(receivePacket).length;

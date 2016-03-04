@@ -401,6 +401,13 @@ public class ErrorSimulator {
 	    System.out.println("  ** Starting new thread with ID " + requestThread.getId() + "...\n");
 	    
 	    requestThread.start();
+	    
+	    try {
+		    requestThread.join();
+	    } catch (InterruptedException e) {
+	    	
+	    }
+	    
 	   
 	}
 	

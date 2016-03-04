@@ -490,8 +490,23 @@ public class ErrorSimulatorRequest implements Runnable {
       // Construct a datagram packet to send to the Client
       sendPacket = new DatagramPacket(receivePacket.getData(), receivePacket.getLength(), clientAddress, clientPort);
       
-      // Send the packet to the client
-      sendPacket(sendReceiveSocket, sendPacket);
+      try {
+    	  ErrorSimulator.PacketType typeOfPacketReceived = getPacketType(receivePacket);
+    	  
+    	  if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.ACK)) {
+    		  currentAckPacketNumber++;
+    		  simulateErrorAndSendPacket(sendPacket, currentAckPacketNumber);
+    	  } else if (typeOfPacketReceived.equals(ErrorSimulator.PacketType.DATA)) {
+    		  currentDataPacketNumber++;
+    		  simulateErrorAndSendPacket(sendPacket, currentDataPacketNumber);
+    	  } else {
+    		  simulateErrorAndSendPacket(sendPacket, 0);
+    	  }
+      } catch (InvalidPacketTypeException e) {
+    	  // Send the packet without attempting to simulate any error
+    	 sendPacket(sendReceiveSocket, sendPacket);
+      }
+      
       
       
       while (true) {
@@ -510,7 +525,7 @@ public class ErrorSimulatorRequest implements Runnable {
 		  receivePacket = receivePacket(sendReceiveSocket, 517, RECEIVE_TIMOUT_BEFORE_CLOSING_THREAD);
 	  } catch (SocketTimeoutException e) {
 		  // No packet has been received within the time specified...Close thread
-		  System.out.println("\n **** Error Sim Request Finished...Closing Error Sim Thread # " + Thread.currentThread().getId() + " ****\n");
+		  System.out.println("\n **** Error Sim Request Thread # " + Thread.currentThread().getId() + " Finished...Closing Thread ****\n");
 		  sendReceiveSocket.close();
 		  Thread.currentThread().interrupt();
 		  return;
