@@ -251,7 +251,7 @@ public class Request implements Runnable {
 	}
 	
 	private void validateDataPacket(DatagramPacket packet, byte[] expectedBlockNumber, int expectedPort)
-			throws IllegalTftpOperationException, UnknownTransferIdException {
+			throws IllegalTftpOperationException, UnknownTransferIdException, PacketAlreadyReceivedException {
 		
 		removeTrailingZeroBytesFromDataPacket(packet);
 			
@@ -261,19 +261,27 @@ public class Request implements Runnable {
 			byte[] data = packet.getData();
 			
 			if (data[0] == 0 && data[1] == PacketType.DATA.getOpcode()) {
-				if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
-								
-					// Check to make sure the packet is not larger than expected
-					if (data.length <= 516) {
-						// The packet is valid
-						return;
-						
-					} else {
-						throw new IllegalTftpOperationException("DATA packet contains too much data. Maximum is 512 bytes");
-					}
-
+				// Check to make sure the packet is not larger than expected
+				if (data.length > 516) {
+					// The packet is too large
+					throw new IllegalTftpOperationException("DATA packet contains too much data. Maximum is 512 bytes");
 					
+				}
+				
+				// Check to make sure the block number is valid 
+
+				short packetBlockNumberShort   = getBlockNumberAsShort(new byte[]{ data[2], data[3]});
+				short expectedBlockNumberShort = getBlockNumberAsShort(expectedBlockNumber);
+				
+				if (packetBlockNumberShort == expectedBlockNumberShort) {
+					//Block number is valid
+					return;
+				} else if (packetBlockNumberShort < expectedBlockNumberShort) {
+					//Block number was already received, beforehand
+					throw new PacketAlreadyReceivedException("DATA packet with block number" + packetBlockNumberShort +
+							" has already been recieved");
 				} else {
+					//Block number is too high, has not been seen
 					throw new IllegalTftpOperationException("DATA packet with invalid block number. "
 							+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
 									+ " but received " + data[2] + data[3]);
@@ -577,27 +585,34 @@ public class Request implements Runnable {
 	    try {
 	    	BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("src/server/files/" + fileName));
 	    	
+			// Construct the first ACK datagram packet with block number 00
+		    try {
+		    	sendPacket = formACKPacket(requestPacket.getAddress(), requestPacket.getPort(), blockNumber);
+		    } catch (UnknownHostException e) {
+		        e.printStackTrace();
+		        System.exit(1);
+		    }
+		    
+		    
+		    // Send the first ACK packet
+		    sendPacket(sendReceiveSocket, sendPacket);
+		    
+			
+		    // Increment the block number
+		    blockNumber = incrementBlockNumber(blockNumber);
+	    	
 		    do {
-				// Construct an ACK datagram packet
+
+			    // Try to receive a packet
 			    try {
-			    	sendPacket = formACKPacket(requestPacket.getAddress(), requestPacket.getPort(), blockNumber);
-			    } catch (UnknownHostException e) {
-			        e.printStackTrace();
-			        System.exit(1);
+			    	receivePacket = receivePacket(sendReceiveSocket, 517);
+			    } catch (SocketTimeoutException te) {
+        			//Timeout on receiving DATA packet - do not retransmit
+			    	System.out.println("\n ****** No response from Client...Closing Thread ******");
+        			out.close();
+        			Thread.currentThread().interrupt();
+        			return;
 			    }
-			    
-			    
-			    // Send the ACK packet
-			    sendPacket(sendReceiveSocket, sendPacket);
-			    
-				
-			    // Increment the block number
-			    blockNumber = incrementBlockNumber(blockNumber);
-			    
-			    
-			    // Wait to receive a packet
-			    receivePacket = receivePacket(sendReceiveSocket, 517);
-			    
 			    
 			    try {
 			    	PacketType packetType = getPacketType(receivePacket);
@@ -612,6 +627,21 @@ public class Request implements Runnable {
 						    
 						    // Write to file
 						    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
+						    
+							// Construct an ACK datagram packet
+						    try {
+						    	sendPacket = formACKPacket(requestPacket.getAddress(), requestPacket.getPort(), blockNumber);
+						    } catch (UnknownHostException e) {
+						        e.printStackTrace();
+						        System.exit(1);
+						    }
+						    
+						    
+						    // Send the ACK packet
+						    sendPacket(sendReceiveSocket, sendPacket);
+						    
+						    // Increment the block number
+						    blockNumber = incrementBlockNumber(blockNumber);
 					    	
 			    	    } catch (IllegalTftpOperationException illegalOperationException) {
 			    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
@@ -647,6 +677,25 @@ public class Request implements Runnable {
 				    	    // Send the error packet
 				    	    sendPacket(sendReceiveSocket, sendErrorPacket);
 			    	    	
+			    	    } catch(PacketAlreadyReceivedException alreadyReceivedException) {
+			    	    	//Ignore this packet, but send an ACK packet with appropriate block number regardless
+			    	    	System.out.println("\n*** The received DATA packet was already received beforehand...Sending ACK packet and continuing... *** \n");
+			    	    	
+			    	    	//Get block number from duplicate DATA packet
+			    	    	byte[] duplicateBlockNumber = new byte[2];
+			    	    	duplicateBlockNumber[0] = requestPacket.getData()[2];
+			    	    	duplicateBlockNumber[1] = requestPacket.getData()[3];
+			    	    	
+			    	    	//Construct ACK packet
+			    	    	DatagramPacket sendAckPacket = formACKPacket(requestPacket.getAddress(),
+			    	    			receivePacket.getPort(),
+			    	    			duplicateBlockNumber);
+			    	    			
+			    	    	//Send the packet		
+			    	    	sendPacket(sendReceiveSocket, sendAckPacket);
+
+						    
+			    	    	continue;
 			    	    }
 					    
 			    	} else if (packetType.equals(PacketType.ERROR)) {

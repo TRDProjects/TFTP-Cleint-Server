@@ -10,7 +10,7 @@ public class ErrorToSimulate {
 		EMPTY_FILENAME(2, "Empty filename"),
 		EMPTY_MODE(3, "Empty mode"),
 		INVALID_MODE(4, "Invalid mode"),
-		DUPLICATE_WRQ_PACKET(5, "Duplicate WRQ packet (write request packet)"),
+		DUPLICATE_WRQ_PACKET(5, "Duplicate WRQ packet (will cause 2 ACK's to be sent from different ports/TID's)"),
 		INVALID_ACK_OPCODE(6, "Invalid ACK packet TFTP opcode"),
 		INVALID_ACK_BLOCK_NUMBER(7, "Invalid ACK packet block number"),
 		INVALID_DATA_OPCODE(8, "Invalid DATA packet TFTP opcode"),

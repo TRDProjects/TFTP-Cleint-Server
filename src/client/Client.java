@@ -202,7 +202,7 @@ public class Client {
 	
 	
 	private void validateDataPacket(DatagramPacket packet, byte[] expectedBlockNumber, int expectedPort)
-			throws IllegalTftpOperationException, UnknownTransferIdException {
+			throws IllegalTftpOperationException, UnknownTransferIdException, PacketAlreadyReceivedException {
 		
 		removeTrailingZeroBytesFromDataPacket(packet);
 			
@@ -212,23 +212,32 @@ public class Client {
 			byte[] data = packet.getData();
 			
 			if (data[0] == 0 && data[1] == PacketType.DATA.getOpcode()) {
-				if (data[2] == expectedBlockNumber[0] && data[3] == expectedBlockNumber[1]) {
-								
-					// Check to make sure the packet is not larger than expected
-					if (data.length <= 516) {
-						// The packet is valid
-						return;
-						
-					} else {
-						throw new IllegalTftpOperationException("DATA packet contains too much data. Maximum is 512 bytes");
-					}
-
-					
-				} else {
-					throw new IllegalTftpOperationException("DATA packet with invalid block number. "
-							+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
-									+ " but received " + data[2] + data[3]);
+				
+				// Check to make sure the packet is not larger than expected
+				if (data.length > 516) {
+					throw new IllegalTftpOperationException("DATA packet contains too much data. Maximum is 512 bytes");
 				}
+				
+				// Check to make sure the block number is valid 
+				
+				short packetBlockNumberShort   = getBlockNumberAsShort(new byte[]{ data[2], data[3]});
+				short expectedBlockNumberShort = getBlockNumberAsShort(expectedBlockNumber);
+				
+				
+				if (packetBlockNumberShort == expectedBlockNumberShort) {
+					// The DATA packet is valid and it is for the block number we are expecting
+					return;
+					
+				} else if (packetBlockNumberShort < expectedBlockNumberShort) {
+					// The DATA packet was already received beforehand
+					throw new PacketAlreadyReceivedException("DATA packet with block number " + packetBlockNumberShort + 
+							" was already received");
+				} else {
+					throw new IllegalTftpOperationException("Invalid block number. "
+							+ "Expected " + expectedBlockNumberShort 
+									+ " but received " + packetBlockNumberShort);
+				}
+
 				
 			} else {
 				throw new IllegalTftpOperationException("Invalid DATA packet opcode. Must be 0" + PacketType.DATA.getOpcode());
@@ -269,7 +278,7 @@ public class Client {
 				short expectedBlockNumberShort = getBlockNumberAsShort(expectedBlockNumber);
 				
 				if (packetBlockNumberShort == expectedBlockNumberShort) {
-					// The ACK is valid and it is the exact ACK that we are expecting
+					// The ACK packet is valid and it is for the block number we are expecting
 					return;
 					
 				} else if (packetBlockNumberShort < expectedBlockNumberShort) {
@@ -278,8 +287,8 @@ public class Client {
 							" was already received");
 				} else {
 					throw new IllegalTftpOperationException("Invalid block number. "
-							+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
-									+ " but received " + data[2] + data[3]);
+							+ "Expected " + expectedBlockNumberShort 
+									+ " but received " + packetBlockNumberShort);
 				}
 				
 			} else {
@@ -668,6 +677,27 @@ public class Client {
     		            	// Send the error packet
     		            	sendPacket(sendReceiveSocket, sendErrorPacket);
     		    	    	
+    		    	    } catch (PacketAlreadyReceivedException packetReceivedException) {
+    		    	    	System.out.println("\n*** The received DATA packet was already received beforehand...Sending ACK packet for it... *** \n");
+    		    	    	byte[] duplicateDataPacketBlockNumber = {receivePacket.getData()[2], receivePacket.getData()[3]};
+    		    	    	
+    		    			// Construct an ACK for the duplicate DATA packet
+    		    		    try {
+    		    		    	sendPacket = formACKPacket(receivePacket.getAddress(), receivePacket.getPort(), duplicateDataPacketBlockNumber);
+    		    		    } catch (UnknownHostException e) {
+    		    		    	out.close();
+    		    		        e.printStackTrace();
+    		    		        System.exit(1);
+    		    		    }
+    		    		    
+    		    		    // Send the ACK packet for the duplicate DATA packet
+    		    		    sendPacket(sendReceiveSocket, sendPacket);
+    		    		    
+    		    		    // Wait to receive a packet back from the server
+    		    		    receivePacket = receivePacket(sendReceiveSocket, 517);
+    		    		    
+    		    		    // Move to the beginning of the loop
+    		    		    continue;
     		    	    }
     				    
     		    	} else if (packetType.equals(PacketType.ERROR)) {
