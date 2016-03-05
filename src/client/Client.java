@@ -542,6 +542,10 @@ public class Client {
 		    	    	    } catch (PacketAlreadyReceivedException alreadyReceivedException) {
 		    	    	    	// Ignore this packet
 		    	    	    	System.out.println("\n*** The received ACK packet was already received beforehand...Ignoring it... *** \n");
+		    	    	    	
+		 	 		    	   // Attempt to receive a packet
+		 	 		    	   receivePacket = receivePacket(sendReceiveSocket, 517);
+		 	 		    	   
 		    	    	    	continue;
 		    	    	    }
 		    	    	    
