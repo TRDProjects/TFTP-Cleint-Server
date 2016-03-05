@@ -491,7 +491,6 @@ public class Request implements Runnable {
 			                    // ACK packet has been validated so we increment the block number now
 			    	    	    blockNumber = incrementBlockNumber(blockNumber);
 			    	    	    
-			    	    	    break;
 		    	    	    	
 		    	    	    } catch (IllegalTftpOperationException illegalOperationException) {
 		    	    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());

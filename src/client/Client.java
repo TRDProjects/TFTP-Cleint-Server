@@ -589,6 +589,8 @@ public class Client {
 	        	
 	        }
 	        
+		    System.out.println("\n Client (" + Thread.currentThread() + "): Finished sending file");
+	        
 	        in.close();
     	} catch (FileNotFoundException e) {
     		System.out.println("No such file " + fileName);
@@ -622,15 +624,6 @@ public class Client {
     		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("src/client/files/" + fileName));
     			
     	    do {
-    	    	
-    	    	if (!(receivePacket.getData()[2] == 0 && receivePacket.getData()[3] == 0)) {
-	    		    // Wait to receive a packet back from the server
-	    		    try {
-    		    		receivePacket = receivePacket(sendReceiveSocket, 517);
-	    		    } catch (SocketTimeoutException e) {
-	    		    	
-	    		    }
-    	    	}
 	    		
     		    try {
     		    	PacketType packetType = getPacketType(receivePacket);
@@ -662,6 +655,15 @@ public class Client {
     		    			
     		    		    // Increment the block number
     		    		    blockNumber = incrementBlockNumber(blockNumber);
+    		    		    
+    		    		    if (dataLength == 512) {
+        		    		    // Wait to receive a packet back from the server
+        		    		    try {
+        	    		    		receivePacket = receivePacket(sendReceiveSocket, 517);
+        		    		    } catch (SocketTimeoutException e) {
+        		    		    	
+        		    		    }
+    		    		    }
     		    		    
     				    	
     		    	    } catch (IllegalTftpOperationException illegalOperationException) {
@@ -758,6 +760,7 @@ public class Client {
     	    
     	    
 		    // Write the data from the last DATA packet to file
+    	    /*
 		    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
     	    
     		// Construct the final ACK
@@ -771,6 +774,7 @@ public class Client {
     	    
     	    // Send the final ACK packet
     	    sendPacket(sendReceiveSocket, sendPacket);
+    	    */
     	    
     	    
     	    out.close();
