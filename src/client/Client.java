@@ -854,7 +854,7 @@ public class Client {
     	try {
         	receivePacket = receivePacket(sendReceiveSocket, 517);
     	} catch (SocketTimeoutException firstSocketTimeoutException) {
-    		System.out.println("\n *** Socket Timeout...Ending Session... ***");
+    		System.out.println("\n *** Socket Timeout...Server not responding to request...Ending Session... ***");
     		return;
     	}
 
@@ -875,16 +875,6 @@ public class Client {
 	    		System.out.println("\n*** Received error...Ending session... ***\n");
 	    		return;
 		    	
-	    		/*
-	    		ErrorType errorType = getErrorType(receivePacket);
-	    		
-	    		if (errorType != null) {
-	    			if (errorType.equals(ErrorType.ILLEGAL_TFTP_OPERATION)) {
-	    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error packet...Ending session...***");
-	    				return;
-	    			}
-	    		}
-	    		*/
 	    	}
 	    	
 	    } catch (InvalidPacketTypeException e) {

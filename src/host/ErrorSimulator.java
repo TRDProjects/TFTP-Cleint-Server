@@ -142,7 +142,7 @@ public class ErrorSimulator {
 			  
 		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_OPCODE) {
 			  
-			  System.out.print("   Enter the number of the ACK packet you would like to change the opCode for (i.e. 1): ");
+			  System.out.print("   Enter the number of the ACK packet you would like to change the opCode for: ");
 			  errorToSimulate.setTargetPacketNumber(Keyboard.getInteger());
 					  
 			  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 04)
@@ -170,7 +170,7 @@ public class ErrorSimulator {
 			  
 		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_BLOCK_NUMBER) {
 			  
-			  System.out.print("   Enter the number of the ACK packet you would like to change the block number for (i.e. 1): ");
+			  System.out.print("   Enter the number of the ACK packet you would like to change the block number for: ");
 			  errorToSimulate.setTargetPacketNumber(Keyboard.getInteger());
 			  
 			  //get input from the user of the block number they would like to use
@@ -199,7 +199,7 @@ public class ErrorSimulator {
 			  
 		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_DATA_OPCODE) {
 			  
-			  System.out.print("   Enter the number of the DATA packet you would like to change the opCode for (i.e. 1): ");
+			  System.out.print("   Enter the number of the DATA packet you would like to change the opCode for: ");
 			  errorToSimulate.setTargetPacketNumber(Keyboard.getInteger());
 			  
 			  //Get input from the user of the 2 bytes they would like to change the original opcode to (i.e. 07 instead of 03)
@@ -227,7 +227,7 @@ public class ErrorSimulator {
 			  
 		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_DATA_BLOCK_NUMBER) {
 			  
-			  System.out.print("   Enter the number of the DATA packet you would like to change the block number for (i.e. 1): ");
+			  System.out.print("   Enter the number of the DATA packet you would like to change the block number for: ");
 			  errorToSimulate.setTargetPacketNumber(Keyboard.getInteger());
 			  
 			  //get input from the user of the block number they would like to use
@@ -255,7 +255,7 @@ public class ErrorSimulator {
 			  
 			  
 		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LARGE_DATA_PACKET) {
-			  System.out.print("   Enter the number of the DATA packet you would like to make larger (i.e. 1): ");
+			  System.out.print("   Enter the number of the DATA packet you would like to make larger: ");
 			  errorToSimulate.setTargetPacketNumber(Keyboard.getInteger());
 			  
 		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LOSE_PACKET) {
@@ -284,7 +284,7 @@ public class ErrorSimulator {
 			  }
 			  
 			  if (!errorToSimulate.getPacketType().equals(PacketType.READ) && !errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
-				  System.out.print("   Enter the number of the packet you want to lose (i.e. 1): ");
+				  System.out.print("   Enter the number of the packet you want to lose: ");
 				  errorToSimulate.setTargetPacketNumber(Keyboard.getInteger());
 			  } else {
 				  errorToSimulate.setTargetPacketNumber(0);
@@ -316,7 +316,7 @@ public class ErrorSimulator {
 			  }
 			  
 			  if (!errorToSimulate.getPacketType().equals(PacketType.READ) && !errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
-				  System.out.print("   Enter the number of the packet you want to delay (i.e. 1): ");
+				  System.out.print("   Enter the number of the packet you want to delay: ");
 				  errorToSimulate.setTargetPacketNumber(Keyboard.getInteger());
 			  } else {
 				  errorToSimulate.setTargetPacketNumber(0);
@@ -354,7 +354,7 @@ public class ErrorSimulator {
 			  }
 			  
 			  if (!errorToSimulate.getPacketType().equals(PacketType.READ) && !errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
-				  System.out.print("   Enter the number of the packet you want to duplicate (i.e. 1): ");
+				  System.out.print("   Enter the number of the packet you want to duplicate: ");
 				  errorToSimulate.setTargetPacketNumber(Keyboard.getInteger());
 			  } else {
 				  errorToSimulate.setTargetPacketNumber(0);
