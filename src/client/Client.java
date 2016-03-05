@@ -393,6 +393,7 @@ public class Client {
 	
 	private void sendFile(DatagramPacket packet, String fileName) {
 		int connectionPort = packet.getPort();
+		boolean receivedDuplicateAck = false;
 		
 		// Since the client will be sending the DATA packets, we set a timeout on the socket
 		try {
@@ -505,6 +506,8 @@ public class Client {
 		    	    	    	
 			                    // ACK packet has been validated so we increment the block number now
 			    	    	    blockNumber = incrementBlockNumber(blockNumber);
+			    	    	    
+			    	    	    receivedDuplicateAck = false;
 		    	    	    	
 		    	    	    } catch (IllegalTftpOperationException illegalOperationException) {
 		    	    	    	System.out.println("IllegalTftpOperationException: " + illegalOperationException.getMessage());
@@ -542,11 +545,8 @@ public class Client {
 		    	    	    } catch (PacketAlreadyReceivedException alreadyReceivedException) {
 		    	    	    	// Ignore this packet
 		    	    	    	System.out.println("\n*** The received ACK packet was already received beforehand...Ignoring it... *** \n");
-		    	    	    	
-		 	 		    	   // Attempt to receive a packet
-		 	 		    	   receivePacket = receivePacket(sendReceiveSocket, 517);
-		 	 		    	   
-		    	    	    	continue;
+		    	    	    	receivedDuplicateAck = true;
+		    	    	        continue;
 		    	    	    }
 		    	    	    
 		    	    	        
@@ -587,7 +587,7 @@ public class Client {
 						return;
 		    	    }
 		    	    
-	           } while (receivePacket.getPort() != connectionPort);
+	           } while (receivePacket.getPort() != connectionPort || receivedDuplicateAck);
 
 	    	    
 	        	
