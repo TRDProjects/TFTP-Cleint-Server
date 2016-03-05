@@ -280,7 +280,7 @@ public class Request implements Runnable {
 					return;
 				} else if (packetBlockNumberShort < expectedBlockNumberShort) {
 					//Block number was already received, beforehand
-					throw new PacketAlreadyReceivedException("DATA packet with block number" + packetBlockNumberShort +
+					throw new PacketAlreadyReceivedException("DATA packet with block number" + data[2] + data[3] +
 							" has already been recieved");
 				} else {
 					//Block number is too high, has not been seen
@@ -332,7 +332,7 @@ public class Request implements Runnable {
 					
 				} else if (packetBlockNumberShort < expectedBlockNumberShort) {
 					// The ACK was already received beforehand
-					throw new PacketAlreadyReceivedException("ACK packet with block number " + packetBlockNumberShort + 
+					throw new PacketAlreadyReceivedException("ACK packet with block number " + data[2] + data[3] + 
 							" was already received");
 				} else {
 					throw new IllegalTftpOperationException("Invalid block number. "
@@ -490,6 +490,8 @@ public class Request implements Runnable {
 		    	    	    	
 			                    // ACK packet has been validated so we increment the block number now
 			    	    	    blockNumber = incrementBlockNumber(blockNumber);
+			    	    	    
+			    	    	    break;
 		    	    	    	
 		    	    	    } catch (IllegalTftpOperationException illegalOperationException) {
 		    	    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
@@ -729,11 +731,11 @@ public class Request implements Runnable {
 			    	    	
 			    	    	//Get block number from duplicate DATA packet
 			    	    	byte[] duplicateBlockNumber = new byte[2];
-			    	    	duplicateBlockNumber[0] = requestPacket.getData()[2];
-			    	    	duplicateBlockNumber[1] = requestPacket.getData()[3];
+			    	    	duplicateBlockNumber[0] = receivePacket.getData()[2];
+			    	    	duplicateBlockNumber[1] = receivePacket.getData()[3];
 			    	    	
 			    	    	//Construct ACK packet
-			    	    	DatagramPacket sendAckPacket = formACKPacket(requestPacket.getAddress(),
+			    	    	DatagramPacket sendAckPacket = formACKPacket(receivePacket.getAddress(),
 			    	    			receivePacket.getPort(),
 			    	    			duplicateBlockNumber);
 			    	    			

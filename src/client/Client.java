@@ -230,12 +230,12 @@ public class Client {
 					
 				} else if (packetBlockNumberShort < expectedBlockNumberShort) {
 					// The DATA packet was already received beforehand
-					throw new PacketAlreadyReceivedException("DATA packet with block number " + packetBlockNumberShort + 
+					throw new PacketAlreadyReceivedException("DATA packet with block number " + data[2] + data[3] + 
 							" was already received");
 				} else {
 					throw new IllegalTftpOperationException("Invalid block number. "
-							+ "Expected " + expectedBlockNumberShort 
-									+ " but received " + packetBlockNumberShort);
+							+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
+									+ " but received " + data[2] + data[3]);
 				}
 
 				
@@ -283,12 +283,12 @@ public class Client {
 					
 				} else if (packetBlockNumberShort < expectedBlockNumberShort) {
 					// The ACK was already received beforehand
-					throw new PacketAlreadyReceivedException("ACK packet with block number " + packetBlockNumberShort + 
+					throw new PacketAlreadyReceivedException("ACK packet with block number " + data[2] + data[3] + 
 							" was already received");
 				} else {
 					throw new IllegalTftpOperationException("Invalid block number. "
-							+ "Expected " + expectedBlockNumberShort 
-									+ " but received " + packetBlockNumberShort);
+							+ "Expected " + expectedBlockNumber[0] + expectedBlockNumber[1] 
+									+ " but received " + data[2] + data[3]);
 				}
 				
 			} else {
@@ -623,6 +623,14 @@ public class Client {
     			
     	    do {
     	    	
+    	    	if (!(receivePacket.getData()[2] == 0 && receivePacket.getData()[3] == 0)) {
+	    		    // Wait to receive a packet back from the server
+	    		    try {
+    		    		receivePacket = receivePacket(sendReceiveSocket, 517);
+	    		    } catch (SocketTimeoutException e) {
+	    		    	
+	    		    }
+    	    	}
 	    		
     		    try {
     		    	PacketType packetType = getPacketType(receivePacket);
@@ -655,16 +663,6 @@ public class Client {
     		    		    // Increment the block number
     		    		    blockNumber = incrementBlockNumber(blockNumber);
     		    		    
-    		    		    // Wait to receive a packet back from the server
-    		    		    try {
-            		    		receivePacket = receivePacket(sendReceiveSocket, 517);
-    		    		    } catch (SocketTimeoutException e) {}
-
-    		    		    
-    		    		    
-    		    		    if (!getPacketType(receivePacket).equals(PacketType.DATA)) {
-    		    		    	notDataPacket = true;
-    		    		    }
     				    	
     		    	    } catch (IllegalTftpOperationException illegalOperationException) {
     		    	    	System.out.println("IllegalTftpOperationException: " + illegalOperationException.getMessage());
@@ -856,18 +854,8 @@ public class Client {
     	try {
         	receivePacket = receivePacket(sendReceiveSocket, 517);
     	} catch (SocketTimeoutException firstSocketTimeoutException) {
-    		System.out.println("\n *** Socket Timeout #1...Sending another request packet... ***");
-
-        	// Send another RRQ/WRQ packet
-        	sendPacket(sendReceiveSocket, sendPacket);
-        	
-        	try {
-        		receivePacket = receivePacket(sendReceiveSocket, 517);
-        	} catch (SocketTimeoutException secondSocketTimeoutException) {
-        		System.out.println("\n *** Socket Timeout #2...***");
-        		System.out.println("\n ***** Server Unreachable...Ending session... *****\n");
-        		return;
-        	}
+    		System.out.println("\n *** Socket Timeout...Ending Session... ***");
+    		return;
     	}
 
 	    
@@ -949,7 +937,6 @@ public class Client {
 	public static void main(String args[]) {
 		
 		Client newClient = new Client(Mode.TEST);
-		
 		
 		while(true) {
 			System.out.println("------------------------------------------------------");
