@@ -632,6 +632,9 @@ public class Client {
     				    try {
     				    	validateDataPacket(receivePacket, blockNumber, connectionPort);
     				    	
+    		    		    // Update the length of the file data
+    		    		    dataLength = getFileDataFromDataPacket(receivePacket).length;
+    				    	
     					    // Write to file
     					    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
     		    		    
@@ -653,11 +656,11 @@ public class Client {
     		    		    blockNumber = incrementBlockNumber(blockNumber);
     		    		    
     		    		    // Wait to receive a packet back from the server
-        		    		receivePacket = receivePacket(sendReceiveSocket, 517);
+    		    		    try {
+            		    		receivePacket = receivePacket(sendReceiveSocket, 517);
+    		    		    } catch (SocketTimeoutException e) {}
 
     		    		    
-    		    		    // Update the length of the file data
-    		    		    dataLength = getFileDataFromDataPacket(receivePacket).length;
     		    		    
     		    		    if (!getPacketType(receivePacket).equals(PacketType.DATA)) {
     		    		    	notDataPacket = true;
@@ -853,7 +856,7 @@ public class Client {
     	try {
         	receivePacket = receivePacket(sendReceiveSocket, 517);
     	} catch (SocketTimeoutException firstSocketTimeoutException) {
-    		System.out.println("\n *** Socket Timeout...Sending another request packet... ***");
+    		System.out.println("\n *** Socket Timeout #1...Sending another request packet... ***");
 
         	// Send another RRQ/WRQ packet
         	sendPacket(sendReceiveSocket, sendPacket);
@@ -861,7 +864,7 @@ public class Client {
         	try {
         		receivePacket = receivePacket(sendReceiveSocket, 517);
         	} catch (SocketTimeoutException secondSocketTimeoutException) {
-        		System.out.println("\n *** Socket Timeout... ***");
+        		System.out.println("\n *** Socket Timeout #2...***");
         		System.out.println("\n ***** Server Unreachable...Ending session... *****\n");
         		return;
         	}

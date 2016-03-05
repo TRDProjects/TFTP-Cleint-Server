@@ -40,6 +40,9 @@ public class ErrorSimulatorRequest implements Runnable {
     
     try {
       sendReceiveSocket = new DatagramSocket();
+      
+      sendReceiveSocket.setSoTimeout(RECEIVE_TIMOUT_BEFORE_CLOSING_THREAD);
+      
     } catch (SocketException se) {
      se.printStackTrace();
       System.exit(1);
@@ -115,14 +118,7 @@ public class ErrorSimulatorRequest implements Runnable {
       System.out.println("Error Simulator: packet sent");
   }
 	  
-  public DatagramPacket receivePacket(DatagramSocket socket, int bufferLength, int timeout) throws SocketTimeoutException {
-	  
-	  try {
-		  socket.setSoTimeout(timeout);
-	  } catch (SocketException se) {
-          se.printStackTrace();
-          System.exit(1);
-	  }
+  public DatagramPacket receivePacket(DatagramSocket socket, int bufferLength) throws SocketTimeoutException {
 	  
 	  // Construct a DatagramPacket for receiving packets
       byte dataBuffer[] = new byte[bufferLength];
@@ -305,10 +301,8 @@ public class ErrorSimulatorRequest implements Runnable {
  	 	         		    sendPacket(tempSocket, sendAckPacket);
  	 	         		    
  	 	         		    try {
- 	 	         		        receivePacket(tempSocket, 517, 0);	
- 	 	         		    } catch (SocketTimeoutException e) {
- 	 	         		    	
- 	 	         		    }
+ 	 	         		        receivePacket(tempSocket, 517);	
+ 	 	         		    } catch (SocketTimeoutException e) {}
  	 	         		    
  	 	         		    
  	 	         		    System.out.println("\n **** Resuming file transfer on original port ****");
@@ -385,7 +379,7 @@ public class ErrorSimulatorRequest implements Runnable {
  	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.LOSE_PACKET) {
  	     		if (packetType.equals(errorToSimulate.getPacketType()) && packetNumber == errorToSimulate.getTargetPacketNumber()) {
  	     			if (errorToSimulate.getPacketType().equals(PacketType.READ)) {
- 	     				System.out.println("\n **** Losing RRQ Packet ***"); 
+ 	     				System.out.println("\n **** Losing RRQ Packet ***");
  	     			} else if (errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
  	     				System.out.println("\n **** Losing WRQ Packet ***"); 
  	     			} else {
@@ -429,11 +423,13 @@ public class ErrorSimulatorRequest implements Runnable {
  	     			} else {
  	     	  			System.out.println("\n **** Duplicating " + errorToSimulate.getPacketType().name() + 
  	     	  					" Packet #" + packetNumber + 
- 	     	  					". Delay time is " + errorToSimulate.getDelayTime() + "ms ****");
+ 	     	  					". Delay time is " + errorToSimulate.getDelayTime() + " ms ****");
  	     			}
  	     			
  	     			// Send the first duplicate packet now
  	     			sendPacket(sendReceiveSocket, packet);
+ 	     			
+ 	     			System.out.println("\n >>>> Waiting for " + errorToSimulate.getDelayTime() + " ms <<<<<<\n");
  	     			
  	     			// Delay
  	     			try {
@@ -469,7 +465,7 @@ public class ErrorSimulatorRequest implements Runnable {
       // Process the received request packet
       printPacketInfo(requestPacket, PacketAction.RECEIVE);
     
-      // Construct a datagram packet to send to the Server
+      // Construct a packet to send to the Server
       sendPacket = new DatagramPacket(requestPacket.getData(), requestPacket.getLength(), serverAddress, ErrorSimulator.SERVER_PORT);
       
       // If the user selects an option that simulates an error for a RRQ/WRQ packet then the simulatError method will simulate that error 
@@ -479,9 +475,11 @@ public class ErrorSimulatorRequest implements Runnable {
       
       // Receive the first packet from the server
       try {
-          receivePacket = receivePacket(sendReceiveSocket, 517, 0);
+          receivePacket = receivePacket(sendReceiveSocket, 517);
       } catch (SocketTimeoutException e) {
-    	  
+    	  System.out.println("\n**** Socket Timeout...Error Simulator Request Thread # " + Thread.currentThread().getId() + " Finished...Closing...*****");
+    	  Thread.currentThread().interrupt();
+    	  return;
       }
      
       this.serverRequestThreadPort = receivePacket.getPort();
@@ -522,10 +520,10 @@ public class ErrorSimulatorRequest implements Runnable {
   private void receiveAndSendPackets() {
 	  // Receive a packet
 	  try {
-		  receivePacket = receivePacket(sendReceiveSocket, 517, RECEIVE_TIMOUT_BEFORE_CLOSING_THREAD);
+		  receivePacket = receivePacket(sendReceiveSocket, 517);
 	  } catch (SocketTimeoutException e) {
 		  // No packet has been received within the time specified...Close thread
-		  System.out.println("\n **** Error Sim Request Thread # " + Thread.currentThread().getId() + " Finished...Closing Thread ****\n");
+    	  System.out.println("\n**** Socket Timeout...Error Simulator Request Thread # " + Thread.currentThread().getId() + " Finished...Closing...*****");
 		  sendReceiveSocket.close();
 		  Thread.currentThread().interrupt();
 		  return;

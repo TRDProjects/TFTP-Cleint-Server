@@ -402,11 +402,13 @@ public class ErrorSimulator {
 	    
 	    requestThread.start();
 	    
+	    
 	    try {
 		    requestThread.join();
 	    } catch (InterruptedException e) {
 	    	
 	    }
+	    
 	    
 	   
 	}
