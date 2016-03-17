@@ -20,14 +20,11 @@ import java.io.SyncFailedException;
 
 import client.IllegalTftpOperationException;
 import client.UnknownTransferIdException;
-import client.AccessViolationException;
-import client.DiskFullException;
-import client.FileAlreadyExistsException;
-import client.FileNotFoundException;
 import util.Keyboard;
 
 public class Client {
 	
+	public static final String FILE_PATH = "src/client/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
 	
 	
@@ -411,7 +408,6 @@ public class Client {
 	    // Send data to be written to server
     	try {
     		File file = new File("src/client/files/" + fileName);
-    		if(!file.exists()) throw new FileNotFoundException("TFTP ERROR 01: file not found");
         	BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
 	        
         	
@@ -604,8 +600,6 @@ public class Client {
 		    System.out.println("\n Client (" + Thread.currentThread() + "): Finished sending file");
 	        
 	        in.close();
-    	} catch (FileNotFoundException e) {
-    		System.out.println("No such file " + fileName);
     	} catch (IOException e) {
 	        e.printStackTrace();
 	        System.exit(1);
@@ -634,8 +628,8 @@ public class Client {
 
     	try {
     		File file = new File("src/client/files/" + fileName);
-    		FileOutputStream test = new FileOutputStream(file);
-    		BufferedOutputStream out = new BufferedOutputStream(test);
+    		FileOutputStream fileOutputStream = new FileOutputStream(file);
+    		BufferedOutputStream out = new BufferedOutputStream(fileOutputStream);
     			
     	    do {
 	    		
@@ -651,17 +645,33 @@ public class Client {
     		    		    dataLength = getFileDataFromDataPacket(receivePacket).length;
     				    	
     					    // Write to file
-    		    		    if(file.exists()) throw new FileAlreadyExistsException("TFTP ERROR 06 : File already exists!");
+    		    		    if(file.exists()) {
+    		    		    	// Note: our current setup overwrites files
+    		    		    	/*
+     		    		       System.out.println("*** TFTP ERROR 06 : File " + file + " already exists");
+     		    		       System.out.println("*** Ending session...");
+     		    		       return;
+     		    		       */
+    		    		    }
+    		    		    
+    					    //check to see if the disk is full
+    		    		    try {
+        					    fileOutputStream.getFD().sync();
+    		    		    }  catch (SyncFailedException e) {
+        		    	    	System.out.println("*** TFTP ERROR 03: Disk full!");
+        		    	    	System.out.println("*** Ending session...");
+        		    	    	return;
+        		    	    }
+    					    
     					    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
     					    
     					    
-    					    //check to see if the disk is full
-    		    		    test.getFD().sync();
     		    			// Construct an ACK packet
     		    		    
-    		    		    if(!file.canWrite() || !file.canRead())
-    		    		    {
-    		    		       throw new AccessViolationException("TFTP ERROR 02 : 	Unable to access " + file);
+    		    		    if(!file.canWrite()) {
+    		    		       System.out.println("*** TFTP ERROR 02 : Unable to access file " + file);
+    		    		       System.out.println("*** Ending session...");
+    		    		       return;
     		    		    }
     		    		    
     		    		    try {
@@ -742,16 +752,6 @@ public class Client {
     		    		    
     		    		    // Move to the beginning of the loop
     		    		    continue;
-    		    	    } catch (SyncFailedException e) {
-    		    	    	try{
-    		    	    		throw new DiskFullException("TFTP ERROR 03: Disk full!");
-    		    	    		} catch (DiskFullException r) {
-        		    	    	   System.out.println("Disk full!");
-    		    	    		}
-    		    	    } catch (AccessViolationException e) {
-    		    	    	System.out.println("Access violation for " + file);
-    		    	    } catch (FileAlreadyExistsException e) {
-    		    	    	System.out.println("file Already Exists!");
     		    	    }
     				    
     		    	} else if (packetType.equals(PacketType.ERROR)) {
@@ -811,6 +811,12 @@ public class Client {
     	    
     	    
     	    out.close();
+    	    
+    	} catch (SecurityException securityException) {
+    		System.out.println("*** TFTP ERROR 02: Access violation");
+    		System.out.println("*** Ending session...");
+    		
+    		return;
     		
     	} catch (IOException e) {
 	        e.printStackTrace();
@@ -833,6 +839,17 @@ public class Client {
 		} catch (SocketException se) {
 	    	se.printStackTrace();
 	        System.exit(1);
+		}
+		
+		if (type.equals(PacketType.WRITE)) {
+			// Check if file exists
+			File fileToSend = new File(FILE_PATH + fileName);
+			
+			if (!fileToSend.exists()) {
+				System.out.println("*** TFTP ERROR 01: File " + FILE_PATH + fileToSend.getPath() + " not found...");
+				System.out.println("Ending session...");
+				return;
+			}
 		}
 		
         byte fileNameInBytes[] = fileName.getBytes();
@@ -881,6 +898,8 @@ public class Client {
 	        e.printStackTrace();
 	        System.exit(1);
 	    }
+	    
+		System.out.println("\nSending " + type.name() + " request packet...");
 		
 	    
     	// Send the RRQ/WRQ packet
@@ -963,7 +982,7 @@ public class Client {
 	
 	public static void main(String args[]) {
 		
-		Client newClient = new Client(Mode.TEST);
+		Client newClient = new Client(Mode.NORMAL);
 		
 		while(true) {
 			System.out.println("------------------------------------------------------");
@@ -993,9 +1012,8 @@ public class Client {
 				if (mode.trim().equals("*")) {
 					mode = "netascii";
 				}
-				System.out.println("\nSending READ request...");
 				
-				newClient.sendAndReceive(PacketType.READ, mode, fileName);
+			    newClient.sendAndReceive(PacketType.READ, mode, fileName);
 				
 				System.out.println("------------------------------------------------------");
 				
@@ -1016,9 +1034,10 @@ public class Client {
 				if (mode.trim().equals("*")) {
 					mode = "netascii";
 				}
-				System.out.println("\nSending WRITE request...");
 				
-				newClient.sendAndReceive(PacketType.WRITE, mode, fileName);
+
+			    newClient.sendAndReceive(PacketType.WRITE, mode, fileName);
+
 				
 			} else {
 				System.out.println("Invalid option");

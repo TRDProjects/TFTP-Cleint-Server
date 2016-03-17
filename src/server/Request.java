@@ -4,10 +4,12 @@ import host.InvalidPacketTypeException;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.SyncFailedException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -26,6 +28,7 @@ import server.Server.PacketType;
 
 public class Request implements Runnable {
 	
+	public static final String FILE_PATH = "src/server/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
 	
 	private DatagramSocket sendReceiveSocket;
@@ -441,9 +444,50 @@ public class Request implements Runnable {
 		}
 		
     	try {
-        	BufferedInputStream in = new BufferedInputStream(new FileInputStream("src/server/files/" + fileName));
-
-	        
+        	BufferedInputStream in;
+        	
+	        try {
+	        	in = new BufferedInputStream(new FileInputStream(FILE_PATH + fileName));
+	        } catch(FileNotFoundException fileNotFoundException) {
+	    		System.out.println("FileNotFoundException Thrown: " + fileNotFoundException.getMessage());
+	    		System.out.println("Sending error package...");
+	    		
+	    		// Form the error packet
+	    		DatagramPacket sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
+	    				requestPacket.getPort(),
+	    				ErrorType.FILE_NOT_FOUND,
+	    				fileNotFoundException.getMessage());
+	    		
+	    		// Send the error packet
+	    		sendPacket(sendReceiveSocket, sendErrorPacket);
+	    		
+	    		// Close the thread
+	    		System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+	    		
+	    		Thread.currentThread().interrupt();
+	        	return;
+	        	
+	        } catch (SecurityException securityException) {
+	    		System.out.println("SecurityException Thrown: " + securityException.getMessage());
+	    		System.out.println("Sending error package...");
+	    		
+	    		// Form the error packet
+	    		DatagramPacket sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
+	    				requestPacket.getPort(),
+	    				ErrorType.ACCESS_VIOLATION,
+	    				securityException.getMessage());
+	    		
+	    		// Send the error packet
+	    		sendPacket(sendReceiveSocket, sendErrorPacket);
+	    		
+	    		// Close the thread
+	    		System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+	    		
+	    		Thread.currentThread().interrupt();
+	        	return;
+	        	
+	        }
+        	
 	        // Read the file in 512 byte chunks
 	        while ((n = in.read(dataFromFile)) != -1) {
 	        	     	
@@ -630,7 +674,58 @@ public class Request implements Runnable {
 	    
 	    // Initialize the write file
 	    try {
-	    	BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("src/server/files/" + fileName));
+	    	
+	    	
+	    	BufferedOutputStream out;
+	    	File file;
+	    	FileOutputStream fileOutputStream;
+	    	
+	    	//Catch file not found/security exceptions
+	    	try {
+	    		file = new File (FILE_PATH + fileName);
+	    		fileOutputStream = new FileOutputStream(file);
+	    		out = new BufferedOutputStream(fileOutputStream);
+	    	} catch (FileNotFoundException fileNotFoundException) {
+	    		//Since this is creating or overwriting a file, this exception is only thrown if it cannot be created for some reason, or if the path is that of a directory rather than a file
+	    		
+	    		System.out.println("FileNotFoundException Thrown: " + fileNotFoundException.getMessage());
+	    		System.out.println("Sending error package...");
+	    		
+	    		// Form the error packet
+	    		DatagramPacket sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
+	    				requestPacket.getPort(),
+	    				ErrorType.FILE_NOT_FOUND,
+	    				fileNotFoundException.getMessage());
+	    		
+	    		// Send the error packet
+	    		sendPacket(sendReceiveSocket, sendErrorPacket);
+	    		
+	    		// Close the thread
+	    		System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+	    		
+	    		Thread.currentThread().interrupt();
+	    		return;
+	    		
+	    	} catch (SecurityException securityException) {
+	    		System.out.println("SecurityException Thrown: " + securityException.getMessage());
+	    		System.out.println("Sending error package...");
+	    		
+	    		// Form the error packet
+	    		DatagramPacket sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
+	    				requestPacket.getPort(),
+	    				ErrorType.ACCESS_VIOLATION,
+	    				securityException.getMessage());
+	    		
+	    		// Send the error packet
+	    		sendPacket(sendReceiveSocket, sendErrorPacket);
+	    		
+	    		// Close the thread
+	    		System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+	    		
+	    		Thread.currentThread().interrupt();
+	    		return;
+	    		
+	    	}
 	    	
 			// Construct the first ACK datagram packet with block number 00
 		    try {
@@ -672,8 +767,14 @@ public class Request implements Runnable {
 						    // Update the length of the file data
 						    dataLength = getFileDataFromDataPacket(receivePacket).length;
 						    
+						    try {
+						    	fileOutputStream.getFD().sync();
+						    } catch (SyncFailedException e) {
+						    	
+						    }
 						    // Write to file
 						    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
+
 						    
 							// Construct an ACK datagram packet
 						    try {
@@ -746,7 +847,7 @@ public class Request implements Runnable {
 			    	    }
 					    
 			    	} else if (packetType.equals(PacketType.ERROR)) {
-	    				System.out.println("\n*** Received error packet...Closing Thread...***");
+			    		System.out.println("\n*** Received error packet...Closing Thread...***");
 	    				out.close();
 	    				Thread.currentThread().interrupt();
 	    				return;

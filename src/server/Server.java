@@ -37,8 +37,12 @@ public class Server implements Runnable {
 	
 	
 	public enum ErrorType {
+		FILE_NOT_FOUND((byte) 1),
+		ACCESS_VIOLATION((byte) 2),
+		DISK_FULL((byte) 3),
 		ILLEGAL_TFTP_OPERATION((byte) 4),
-		UNKNOWN_TRANSFER_ID((byte) 5);
+		UNKNOWN_TRANSFER_ID((byte) 5),
+		FILE_ALREADY_EXISTS((byte) 6);
 		
 		private byte errorCode;
 		
