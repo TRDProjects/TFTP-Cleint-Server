@@ -4,8 +4,8 @@ import host.InvalidPacketTypeException;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -16,9 +16,14 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.io.SyncFailedException;
 
 import client.IllegalTftpOperationException;
 import client.UnknownTransferIdException;
+import client.AccessViolationException;
+import client.DiskFullException;
+import client.FileAlreadyExistsException;
+import client.FileNotFoundException;
 import util.Keyboard;
 
 public class Client {
@@ -405,8 +410,11 @@ public class Client {
 		
 	    // Send data to be written to server
     	try {
-        	BufferedInputStream in = new BufferedInputStream(new FileInputStream("src/client/files/" + fileName));
+    		File file = new File("src/client/files/" + fileName);
+    		if(!file.exists()) throw new FileNotFoundException("TFTP ERROR 01: file not found");
+        	BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
 	        
+        	
 	        byte[] dataFromFile = new byte[512];
 	        int n;
 	        byte[] blockNumber = {0, 0};
@@ -625,13 +633,15 @@ public class Client {
 		}
 
     	try {
-    		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("src/client/files/" + fileName));
+    		File file = new File("src/client/files/" + fileName);
+    		FileOutputStream test = new FileOutputStream(file);
+    		BufferedOutputStream out = new BufferedOutputStream(test);
     			
     	    do {
 	    		
     		    try {
     		    	PacketType packetType = getPacketType(receivePacket);
-    		    	
+
     		    	if (packetType.equals(PacketType.DATA)) {
     				    // Validate the DATA packet
     				    try {
@@ -641,10 +651,19 @@ public class Client {
     		    		    dataLength = getFileDataFromDataPacket(receivePacket).length;
     				    	
     					    // Write to file
+    		    		    if(file.exists()) throw new FileAlreadyExistsException("TFTP ERROR 06 : File already exists!");
     					    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
-    		    		    
-    		    		    
+    					    
+    					    
+    					    //check to see if the disk is full
+    		    		    test.getFD().sync();
     		    			// Construct an ACK packet
+    		    		    
+    		    		    if(!file.canWrite() || !file.canRead())
+    		    		    {
+    		    		       throw new AccessViolationException("TFTP ERROR 02 : 	Unable to access " + file);
+    		    		    }
+    		    		    
     		    		    try {
     		    		    	sendPacket = formACKPacket(receivePacket.getAddress(), receivePacket.getPort(), blockNumber);
     		    		    } catch (UnknownHostException e) {
@@ -723,6 +742,16 @@ public class Client {
     		    		    
     		    		    // Move to the beginning of the loop
     		    		    continue;
+    		    	    } catch (SyncFailedException e) {
+    		    	    	try{
+    		    	    		throw new DiskFullException("TFTP ERROR 03: Disk full!");
+    		    	    		} catch (DiskFullException r) {
+        		    	    	   System.out.println("Disk full!");
+    		    	    		}
+    		    	    } catch (AccessViolationException e) {
+    		    	    	System.out.println("Access violation for " + file);
+    		    	    } catch (FileAlreadyExistsException e) {
+    		    	    	System.out.println("file Already Exists!");
     		    	    }
     				    
     		    	} else if (packetType.equals(PacketType.ERROR)) {
