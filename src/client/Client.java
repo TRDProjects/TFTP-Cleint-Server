@@ -798,23 +798,6 @@ public class Client {
     	    } while(dataLength == 512 || notDataPacket || receivePacket.getPort() != connectionPort);
     	    
     	    
-		    // Write the data from the last DATA packet to file
-    	    /*
-		    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
-    	    
-    		// Construct the final ACK
-    	    try {
-    	    	sendPacket = formACKPacket(receivePacket.getAddress(), receivePacket.getPort(), blockNumber);
-    	    } catch (UnknownHostException e) {
-    	    	out.close();
-    	        e.printStackTrace();
-    	        System.exit(1);
-    	    }
-    	    
-    	    // Send the final ACK packet
-    	    sendPacket(sendReceiveSocket, sendPacket);
-    	    */
-    	    
     	    
     	    out.close();
     	    
@@ -1004,7 +987,7 @@ public class Client {
 				
 			} else if (input == '1') { // READ request
 				String fileName = "";
-				String mode = "";
+				String mode = "netascii";
 				
 				System.out.print("Enter the name of the file (if * typed then testFileFromServer.txt will be used): ");
 				fileName = Keyboard.getString();
@@ -1012,12 +995,6 @@ public class Client {
 					fileName = "testFileFromServer.txt";
 				}
 				
-				System.out.println("Enter the mode (if * typed then netascii will be used): ");
-				mode = Keyboard.getString();
-				
-				if (mode.trim().equals("*")) {
-					mode = "netascii";
-				}
 				
 			    newClient.sendAndReceive(PacketType.READ, mode, fileName);
 				
@@ -1026,21 +1003,14 @@ public class Client {
 				
 			} else if (input == '2') { // WRITE request
 				String fileName = "";
-				String mode = "";
+				String mode = "netascii";
 				
 				System.out.print("Enter the name of the file (if * typed then testFileFromClient.txt will be used): ");
 				fileName = Keyboard.getString();
 				if (fileName.trim().equals("*")) {
 					fileName = "testFileFromClient.txt";
 				}
-				
-				System.out.println("Enter the mode (if * typed then netascii will be used): ");
-				mode = Keyboard.getString();
-				
-				if (mode.trim().equals("*")) {
-					mode = "netascii";
-				}
-				
+
 
 			    newClient.sendAndReceive(PacketType.WRITE, mode, fileName);
 

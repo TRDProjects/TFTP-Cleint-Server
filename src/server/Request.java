@@ -19,9 +19,9 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import client.IllegalTftpOperationException;
-import client.PacketAlreadyReceivedException;
-import client.UnknownTransferIdException;
+import server.IllegalTftpOperationException;
+import server.PacketAlreadyReceivedException;
+import server.UnknownTransferIdException;
 import server.Server.ErrorType;
 import server.Server.PacketAction;
 import server.Server.PacketType;
