@@ -248,7 +248,7 @@ public class Client {
 				
 		} else {
 			if (packet.getPort() != expectedPort) {
-				throw new UnknownTransferIdException("Unknown port: " + packet.getPort());
+				throw new UnknownTransferIdException("Unknown port");
 			} else {
 				throw new UnknownTransferIdException("DATA packet received from invalid address: " + packet.getAddress());
 			}
@@ -300,7 +300,7 @@ public class Client {
 			
 		} else {
 			if (packet.getPort() != expectedPort) {
-				throw new UnknownTransferIdException("Unknown port: " + packet.getPort());
+				throw new UnknownTransferIdException("Unknown port");
 			} else {
 				throw new UnknownTransferIdException("ACK packet received from invalid address: " + packet.getAddress());
 			}
@@ -730,6 +730,12 @@ public class Client {
     		            	
     		            	// Send the error packet
     		            	sendPacket(sendReceiveSocket, sendErrorPacket);
+    		            	
+    		    		    // Wait to receive a packet back from the server
+    		    		    receivePacket = receivePacket(sendReceiveSocket, 517);
+    		    		    
+    		    		    // Move to the beginning of the loop
+    		    		    continue;
     		    	    	
     		    	    } catch (PacketAlreadyReceivedException packetReceivedException) {
     		    	    	System.out.println("\n*** The received DATA packet was already received beforehand...Sending ACK packet for it... *** \n");
@@ -789,7 +795,7 @@ public class Client {
     		    }
 
     	    	
-    	    } while(dataLength == 512 || notDataPacket);
+    	    } while(dataLength == 512 || notDataPacket || receivePacket.getPort() != connectionPort);
     	    
     	    
 		    // Write the data from the last DATA packet to file
@@ -982,7 +988,7 @@ public class Client {
 	
 	public static void main(String args[]) {
 		
-		Client newClient = new Client(Mode.NORMAL);
+		Client newClient = new Client(Mode.TEST);
 		
 		while(true) {
 			System.out.println("------------------------------------------------------");

@@ -299,7 +299,7 @@ public class Request implements Runnable {
 				
 		} else {
 			if (packet.getPort() != expectedPort) {
-				throw new UnknownTransferIdException("Unknown port: " + packet.getPort());
+				throw new UnknownTransferIdException("Unknown port");
 			} else {
 				throw new UnknownTransferIdException("DATA packet received from invalid address: " + packet.getAddress());
 			}
@@ -350,7 +350,7 @@ public class Request implements Runnable {
 			
 		} else {
 			if (packet.getPort() != expectedPort) {
-				throw new UnknownTransferIdException("Unknown port: " + packet.getPort());
+				throw new UnknownTransferIdException("Unknown port");
 			} else {
 				throw new UnknownTransferIdException("ACK packet received from invalid address: " + packet.getAddress());
 			}

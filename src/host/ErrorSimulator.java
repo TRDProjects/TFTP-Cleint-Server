@@ -137,9 +137,6 @@ public class ErrorSimulator {
 			  
 			  errorToSimulate.setMode(mode);
 			  
-		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_WRQ_PACKET) {
-	      // Nothing to do here. No user input needed
-			  
 		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_OPCODE) {
 			  
 			  System.out.print("   Enter the number of the ACK packet you would like to change the opCode for: ");
