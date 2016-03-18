@@ -770,7 +770,24 @@ public class Request implements Runnable {
 						    try {
 						    	fileOutputStream.getFD().sync();
 						    } catch (SyncFailedException e) {
-						    	
+				    	    	System.out.println("SyncFailedException Thrown: " + e.getMessage());
+				    	    	System.out.println("Sending error packet...");
+				    	    	
+				    	    	// Form the error packet
+				            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+				            			receivePacket.getPort(), 
+				            			ErrorType.DISK_FULL, 
+				            			e.getMessage());
+				            	
+					    	    // Send the error packet
+					    	    sendPacket(sendReceiveSocket, sendErrorPacket);
+				    	    	
+				    		    // Close the thread
+					    	    System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+				    	    	
+					    	    out.close();
+					    	    Thread.currentThread().interrupt();
+				    	    	return;
 						    }
 						    // Write to file
 						    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);

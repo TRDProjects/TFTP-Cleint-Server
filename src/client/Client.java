@@ -985,7 +985,7 @@ public class Client {
 	
 	public static void main(String args[]) {
 		
-		Client newClient = new Client(Mode.TEST);
+		Client newClient = new Client(Mode.NORMAL);
 		
 		while(true) {
 			System.out.println("------------------------------------------------------");
