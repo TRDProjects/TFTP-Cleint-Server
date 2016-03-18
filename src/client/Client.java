@@ -26,6 +26,7 @@ public class Client {
 	
 	public static final String FILE_PATH = "src/client/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
+	public static final boolean ALLOW_FILE_OVERWRITING = true;
 	
 	
 	public static enum Mode { 
@@ -830,13 +831,26 @@ public class Client {
 	        System.exit(1);
 		}
 		
-		if (type.equals(PacketType.WRITE)) {
+		if (type.equals(PacketType.READ)) {
+			
+			if (!ALLOW_FILE_OVERWRITING) {
+				// Check if file already exists
+				File fileToReceive = new File(FILE_PATH + fileName);
+				
+				if (fileToReceive.exists()) {
+					System.out.println("\n*** TFTP ERROR 06: File " + fileToReceive.getPath() + " already exists...Overwrite not allowed...");
+					System.out.println("*** Ending session...\n");
+					return;	
+				}
+			}
+			
+		} else if (type.equals(PacketType.WRITE)) {
 			// Check if file exists
 			File fileToSend = new File(FILE_PATH + fileName);
 			
 			if (!fileToSend.exists()) {
-				System.out.println("*** TFTP ERROR 01: File " + FILE_PATH + fileToSend.getPath() + " not found...");
-				System.out.println("Ending session...");
+				System.out.println("\n*** TFTP ERROR 01: File " + fileToSend.getPath() + " not found...");
+				System.out.println("*** Ending session...\n");
 				return;
 			}
 		}
