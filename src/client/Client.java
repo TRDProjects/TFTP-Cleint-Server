@@ -101,6 +101,10 @@ public class Client {
 		}
 	 }
 	
+	public Mode getMode() {
+		return mode;
+	}
+	
 	
 	public void printPacketInfo(DatagramPacket packet, PacketAction action) {
 		System.out.println("\n");
@@ -1011,6 +1015,8 @@ public class Client {
 	public static void main(String args[]) {
 		
 		Client newClient = new Client(DEFAULT_MODE);
+		
+		System.out.println("Client running in " + newClient.getMode().name() + " mode");
 		
 		while(true) {
 			System.out.println("------------------------------------------------------");
