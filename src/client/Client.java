@@ -27,9 +27,9 @@ public class Client {
 	
 	public static final Mode DEFAULT_MODE = Mode.NORMAL;
 	
-	public static final String FILE_PATH = "src/client/files/";
+	public static final String FILE_PATH = "F:/Whiplash/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
-	public static final boolean ALLOW_FILE_OVERWRITING = false;
+	public static final boolean ALLOW_FILE_OVERWRITING = true;
 	
 	
 
@@ -653,7 +653,7 @@ public class Client {
 		}
 
     	try {
-    		File file = new File("src/client/files/" + fileName);
+    		File file = new File(FILE_PATH + fileName);
     		FileOutputStream fileOutputStream = new FileOutputStream(file);
     		BufferedOutputStream out = new BufferedOutputStream(fileOutputStream);
     			
@@ -675,6 +675,18 @@ public class Client {
     		    		    if (file.getUsableSpace() < dataLength) {
     		    		    	System.out.println("\n*** TFTP ERROR 03: Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
      		    		        System.out.println("*** Ending session...");
+     		    		        
+     		    		        // Now send error packet to server
+        		    	    	
+     		    		        // Form the error packet
+        		            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+        		            			receivePacket.getPort(), 
+        		            			ErrorType.DISK_FULL, 
+        		            			"(Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.)");
+        		            	
+        		            	// Send the error packet
+        		            	sendPacket(sendReceiveSocket, sendErrorPacket);
+        		            	
      		    		        return;
     		    		    }
 						    
