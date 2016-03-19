@@ -677,7 +677,6 @@ public class Client {
      		    		        System.out.println("*** Ending session...");
      		    		        
      		    		        // Now send error packet to server
-        		    	    	
      		    		        // Form the error packet
         		            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
         		            			receivePacket.getPort(), 
