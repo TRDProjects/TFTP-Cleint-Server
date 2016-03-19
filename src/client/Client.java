@@ -17,7 +17,6 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
-import java.io.SyncFailedException;
 
 import client.IllegalTftpOperationException;
 import client.UnknownTransferIdException;
