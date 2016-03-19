@@ -16,6 +16,7 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Objects;
 import java.io.SyncFailedException;
 
 import client.IllegalTftpOperationException;
@@ -654,6 +655,10 @@ public class Client {
      		    		       return;
      		    		       */
     		    		    }
+						    
+    		    		    System.out.println("Usable space = " + Objects.toString(file.getUsableSpace()));
+						    
+    					    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
     		    		    
     					    //check to see if the disk is full
     		    		    try {
@@ -664,7 +669,7 @@ public class Client {
         		    	    	return;
         		    	    }
     					    
-    					    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
+
     					    
     					    
     		    			// Construct an ACK packet

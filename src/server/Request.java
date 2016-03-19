@@ -9,7 +9,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.SyncFailedException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -18,6 +17,7 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Objects;
 
 import server.IllegalTftpOperationException;
 import server.PacketAlreadyReceivedException;
@@ -28,7 +28,6 @@ import server.Server.PacketType;
 
 public class Request implements Runnable {
 	
-	public static final String FILE_PATH = "src/server/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
 	
 	private DatagramSocket sendReceiveSocket;
@@ -447,7 +446,7 @@ public class Request implements Runnable {
         	BufferedInputStream in;
         	
 	        try {
-	        	in = new BufferedInputStream(new FileInputStream(FILE_PATH + fileName));
+	        	in = new BufferedInputStream(new FileInputStream(Server.FILE_PATH + fileName));
 	        } catch(FileNotFoundException fileNotFoundException) {
 	    		System.out.println("FileNotFoundException Thrown: " + fileNotFoundException.getMessage());
 	    		System.out.println("Sending error package...");
@@ -682,7 +681,7 @@ public class Request implements Runnable {
 	    	
 	    	//Catch file not found/security exceptions
 	    	try {
-	    		file = new File (FILE_PATH + fileName);
+	    		file = new File (Server.FILE_PATH + fileName);
 	    		fileOutputStream = new FileOutputStream(file);
 	    		out = new BufferedOutputStream(fileOutputStream);
 	    	} catch (FileNotFoundException fileNotFoundException) {
@@ -767,17 +766,15 @@ public class Request implements Runnable {
 						    // Update the length of the file data
 						    dataLength = getFileDataFromDataPacket(receivePacket).length;
 						    
-						    try {
-						    	fileOutputStream.getFD().sync();
-						    } catch (SyncFailedException e) {
-				    	    	System.out.println("SyncFailedException Thrown: " + e.getMessage());
+						    if (file.getUsableSpace() < dataLength) {
+						    	System.out.println("Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
 				    	    	System.out.println("Sending error packet...");
 				    	    	
 				    	    	// Form the error packet
 				            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
 				            			receivePacket.getPort(), 
 				            			ErrorType.DISK_FULL, 
-				            			e.getMessage());
+				            			"Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
 				            	
 					    	    // Send the error packet
 					    	    sendPacket(sendReceiveSocket, sendErrorPacket);
@@ -789,6 +786,7 @@ public class Request implements Runnable {
 					    	    Thread.currentThread().interrupt();
 				    	    	return;
 						    }
+						    
 						    // Write to file
 						    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
 
