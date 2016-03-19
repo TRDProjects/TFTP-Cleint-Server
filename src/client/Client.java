@@ -25,13 +25,16 @@ import util.Keyboard;
 
 public class Client {
 	
+	public static final Mode DEFAULT_MODE = Mode.NORMAL;
+	
 	public static final String FILE_PATH = "src/client/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
 	public static final boolean ALLOW_FILE_OVERWRITING = true;
 	
 	
+
 	public static enum Mode { 
-		NORMAL, TEST 
+		NORMAL, TEST // NORMAL sends requests to port 69 while TEST sends to port 68
 	};
 	
 	public static enum PacketType {
@@ -57,8 +60,12 @@ public class Client {
 	}
 	
 	public enum ErrorType {
+		FILE_NOT_FOUND((byte) 1),
+		ACCESS_VIOLATION((byte) 2),
+		DISK_FULL((byte) 3),
 		ILLEGAL_TFTP_OPERATION((byte) 4),
-		UNKNOWN_TRANSFER_ID((byte) 5);
+		UNKNOWN_TRANSFER_ID((byte) 5),
+		FILE_ALREADY_EXISTS((byte) 6);
 		
 		private byte errorCode;
 		
@@ -376,12 +383,24 @@ public class Client {
 		// Check if the packet is an error packet to begin with
 		if (data[0] == 0 && data[1] == PacketType.ERROR.getOpcode()) {
 			
-			// Check if the error is an illegal TFTP operation
-			if (data[2] == 0 && data[3] == ErrorType.ILLEGAL_TFTP_OPERATION.getErrorCode()) {
+			
+			if (data[2] == 0 && data[3] == ErrorType.FILE_NOT_FOUND.getErrorCode()) {
+				return ErrorType.FILE_NOT_FOUND;
+				
+			} else if (data[2] == 0 && data[3] == ErrorType.ACCESS_VIOLATION.getErrorCode()) {
+				return ErrorType.ACCESS_VIOLATION;
+				
+			} else if (data[2] == 0 && data[3] == ErrorType.DISK_FULL.getErrorCode()) {
+				return ErrorType.DISK_FULL;
+				
+		    } else if (data[2] == 0 && data[3] == ErrorType.ILLEGAL_TFTP_OPERATION.getErrorCode()) {
 				return ErrorType.ILLEGAL_TFTP_OPERATION;
 				
 			} else if (data[2] == 0 && data[3] == ErrorType.UNKNOWN_TRANSFER_ID.getErrorCode()) {
 				return ErrorType.UNKNOWN_TRANSFER_ID;
+				
+			} else if (data[2] == 0 && data[3] == ErrorType.FILE_ALREADY_EXISTS.getErrorCode()) {
+				return ErrorType.FILE_ALREADY_EXISTS;
 			}
 			
 		}
@@ -565,7 +584,12 @@ public class Client {
 				    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error packet...Ending session...***");
 				    				
 				                	in.close();
-				                	
+				    				return;
+				    				
+				    			} else if (errorType.equals(ErrorType.DISK_FULL)) {
+				    				System.out.println("\n*** Received DISK_FULL error packet...Ending session...***");
+				    				
+				                	in.close();
 				    				return;
 				    			}
 				    		}
@@ -646,15 +670,6 @@ public class Client {
     		    		    // Update the length of the file data
     		    		    dataLength = getFileDataFromDataPacket(receivePacket).length;
     				    	
-    					    // Write to file
-    		    		    if(file.exists()) {
-    		    		    	// Note: our current setup overwrites files
-    		    		    	/*
-     		    		       System.out.println("*** TFTP ERROR 06 : File " + file + " already exists");
-     		    		       System.out.println("*** Ending session...");
-     		    		       return;
-     		    		       */
-    		    		    }
 						    
     		    		    System.out.println("Usable space = " + Objects.toString(file.getUsableSpace()));
 						    
@@ -990,7 +1005,7 @@ public class Client {
 	
 	public static void main(String args[]) {
 		
-		Client newClient = new Client(Mode.NORMAL);
+		Client newClient = new Client(DEFAULT_MODE);
 		
 		while(true) {
 			System.out.println("------------------------------------------------------");
