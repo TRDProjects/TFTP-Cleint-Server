@@ -13,6 +13,7 @@ public class Server implements Runnable {
 	
 	public static final int PORT = 69;
 	public static final String FILE_PATH = "src/server/files/";
+	public static final boolean ALLOW_FILE_OVERWRITING = true;
 	
 	public static enum PacketType {
 		READ((byte) 1), 

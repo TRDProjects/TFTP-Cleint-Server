@@ -726,6 +726,28 @@ public class Request implements Runnable {
 	    		
 	    	}
 	    	
+	    	if (!Server.ALLOW_FILE_OVERWRITING) {
+	    		if (file.exists()) {
+		    		System.out.println("File already exists in server, file overwriting not allowed.");
+		    		System.out.println("Sending error package...");
+		    		
+		    		// Form the error packet
+		    		DatagramPacket sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
+		    				requestPacket.getPort(),
+		    				ErrorType.FILE_ALREADY_EXISTS,
+		    				"(File already exists, file overwriting disabled)");
+		    		
+		    		// Send the error packet
+		    		sendPacket(sendReceiveSocket, sendErrorPacket);
+		    		
+		    		// Close the thread
+		    		System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+		    		
+		    		Thread.currentThread().interrupt();
+		    		return;
+	    		}
+	    	}
+	    	
 			// Construct the first ACK datagram packet with block number 00
 		    try {
 		    	sendPacket = formACKPacket(requestPacket.getAddress(), requestPacket.getPort(), blockNumber);
@@ -774,7 +796,7 @@ public class Request implements Runnable {
 				            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
 				            			receivePacket.getPort(), 
 				            			ErrorType.DISK_FULL, 
-				            			"Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
+				            			"(Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.)");
 				            	
 					    	    // Send the error packet
 					    	    sendPacket(sendReceiveSocket, sendErrorPacket);
