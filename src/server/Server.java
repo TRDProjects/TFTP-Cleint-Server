@@ -12,7 +12,7 @@ import util.Keyboard;
 public class Server implements Runnable {
 	
 	public static final int PORT = 69;
-	public static final String FILE_PATH = "src/client/files/";
+	public static final String FILE_PATH = "src/server/files/";
 	
 	public static enum PacketType {
 		READ((byte) 1), 
