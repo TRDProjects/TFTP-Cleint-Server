@@ -29,7 +29,7 @@ public class Client {
 	
 	public static final String FILE_PATH = "src/client/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
-	public static final boolean ALLOW_FILE_OVERWRITING = true;
+	public static final boolean ALLOW_FILE_OVERWRITING = false;
 	
 	
 

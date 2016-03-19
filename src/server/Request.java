@@ -743,6 +743,8 @@ public class Request implements Runnable {
 		    		// Close the thread
 		    		System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
 		    		
+		    		out.close();
+		    		
 		    		Thread.currentThread().interrupt();
 		    		return;
 	    		}
