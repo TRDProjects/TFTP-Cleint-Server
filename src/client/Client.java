@@ -671,19 +671,14 @@ public class Client {
     		    		    dataLength = getFileDataFromDataPacket(receivePacket).length;
     				    	
 						    
-    		    		    System.out.println("Usable space = " + Objects.toString(file.getUsableSpace()));
+    		    		    // Check to see if disk is full
+    		    		    if (file.getUsableSpace() < dataLength) {
+    		    		    	System.out.println("\n*** TFTP ERROR 03: Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
+     		    		        System.out.println("*** Ending session...");
+     		    		        return;
+    		    		    }
 						    
     					    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
-    		    		    
-    					    //check to see if the disk is full
-    		    		    try {
-        					    fileOutputStream.getFD().sync();
-    		    		    }  catch (SyncFailedException e) {
-        		    	    	System.out.println("*** TFTP ERROR 03: Disk full!");
-        		    	    	System.out.println("*** Ending session...");
-        		    	    	return;
-        		    	    }
-    					    
 
     					    
     					    
