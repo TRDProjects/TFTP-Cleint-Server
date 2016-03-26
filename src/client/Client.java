@@ -28,7 +28,7 @@ public class Client {
 	
 	public static final String FILE_PATH = "src/client/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
-	public static final boolean ALLOW_FILE_OVERWRITING = false;
+	public static final boolean ALLOW_FILE_OVERWRITING = true;
 	
 	
 
@@ -192,8 +192,14 @@ public class Client {
 	
 	
 	private byte[] incrementBlockNumber(byte[] currentBlockNum) {
-		short blockNum = ByteBuffer.wrap(currentBlockNum).getShort();
 		
+		if (currentBlockNum[1] == (byte) 127) {
+			currentBlockNum[0] = (byte) (++currentBlockNum[0]);
+			currentBlockNum[1] = 0;
+			return currentBlockNum;
+		}
+		
+		short blockNum = ByteBuffer.wrap(currentBlockNum).getShort();
 		byte[] bytes = new byte[2];
 		ByteBuffer buffer = ByteBuffer.allocate(bytes.length);
 		blockNum++;
