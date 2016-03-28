@@ -101,23 +101,12 @@ public class ErrorSimulator {
 	    	 
 			  //Get requested first digit of opcode
 			  int firstOpcode = Keyboard.getInteger();
-		 
-			  while(firstOpcode > 9 || firstOpcode < 0 ){
-				  System.out.println("must be between 0 and 9\n");
-				  firstOpcode = Keyboard.getInteger();
-			  }
 			  
 	  	  System.out.print("   Enter second digit of desired opcode: ");
 	    	 
 			  //Get requested second digit of opcode
 			  int secondOpcode = Keyboard.getInteger();
-		 
-			  while(secondOpcode > 9 || secondOpcode < 0 ){
-				  System.out.println("must be between 0 and 9\n");
-				  secondOpcode = Keyboard.getInteger();
-			  }
-			  
-			  
+
 			  errorToSimulate.setOpcode(new byte[]{ (byte) firstOpcode, (byte) secondOpcode });
 			
 		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.EMPTY_FILENAME) {
@@ -137,9 +126,6 @@ public class ErrorSimulator {
 			  
 			  errorToSimulate.setMode(mode);
 			  
-		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_WRQ_PACKET) {
-	      // Nothing to do here. No user input needed
-			  
 		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_OPCODE) {
 			  
 			  System.out.print("   Enter the number of the ACK packet you would like to change the opCode for: ");
@@ -151,20 +137,11 @@ public class ErrorSimulator {
 			  //Get requested first digit of opcode
 			  int firstOpcode = Keyboard.getInteger();
 		 
-			  while(firstOpcode > 9 || firstOpcode < 0 ){
-				  System.out.println("must be between 0 and 9\n");
-				  firstOpcode = Keyboard.getInteger();
-			  }
 			  
 	  	 System.out.print("      Enter second digit of desired opcode: \n");
 	    	 
 			  //Get requested second digit of opcode
 			  int secondOpcode = Keyboard.getInteger();
-		 
-			  while(secondOpcode > 9 || secondOpcode < 0 ){
-				  System.out.println("must be between 0 and 9\n");
-				  secondOpcode = Keyboard.getInteger();
-			  }
 			  
 			  errorToSimulate.setOpcode(new byte[]{ (byte) firstOpcode, (byte) secondOpcode });
 			  
@@ -179,20 +156,11 @@ public class ErrorSimulator {
 			  //Get first digit of requested new block number
 			  int firstBlockNumber = Keyboard.getInteger();
 			  
-			  while(firstBlockNumber > 9 || firstBlockNumber < 0){
-				  System.out.println("Must be between 0 and 9\n");
-				  firstBlockNumber = Keyboard.getInteger();
-			  }
-			  
 			  System.out.print("      Enter second digit of desired block number: \n");
 			  
 			  //Get second digit of requested new block number
 			  int secondBlockNumber = Keyboard.getInteger();
 			  
-			  while(secondBlockNumber > 9 || secondBlockNumber < 0){
-				  System.out.println("Must be between 0 and 9\n");
-				  secondBlockNumber = Keyboard.getInteger();
-			  }
 			  
 			  errorToSimulate.setBlockNumber(new byte[]{ (byte) firstBlockNumber, (byte) secondBlockNumber });
 	
@@ -207,22 +175,12 @@ public class ErrorSimulator {
 	    	 
 			  //Get requested first digit of opcode
 			  int firstOpcode = Keyboard.getInteger();
-		 
-			  while(firstOpcode > 9 || firstOpcode < 0 ){
-				  System.out.println("must be between 0 and 9\n");
-				  firstOpcode = Keyboard.getInteger();
-			  }
 			  
 			  System.out.print("      Enter second digit of desired opcode: \n");
 	    	 
 			  //Get requested second digit of opcode
 			  int secondOpcode = Keyboard.getInteger();
-		 
-			  while(secondOpcode > 9 || secondOpcode < 0 ){
-				  System.out.println("must be between 0 and 9\n");
-				  secondOpcode = Keyboard.getInteger();
-			  }
-	
+
 			  errorToSimulate.setOpcode(new byte[]{ (byte) firstOpcode, (byte) secondOpcode });
 			  
 		  } else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_DATA_BLOCK_NUMBER) {
@@ -235,21 +193,11 @@ public class ErrorSimulator {
 			  
 			  //Get first digit of requested new block number
 			  int firstBlockNumber = Keyboard.getInteger();
-			  
-			  while(firstBlockNumber > 9 || firstBlockNumber < 0){
-				  System.out.println("Must be between 0 and 9\n");
-				  firstBlockNumber = Keyboard.getInteger();
-			  }
-			  
+			    
 			  System.out.print("      Enter second digit of desired block number: \n");
 			  
 			  //Get second digit of requested new block number
 			  int secondBlockNumber = Keyboard.getInteger();
-			  
-			  while(secondBlockNumber > 9 || secondBlockNumber < 0){
-				  System.out.println("Must be between 0 and 9\n");
-				  secondBlockNumber = Keyboard.getInteger();
-			  }
 			  
 			  errorToSimulate.setBlockNumber(new byte[]{ (byte) firstBlockNumber, (byte) secondBlockNumber });
 			  

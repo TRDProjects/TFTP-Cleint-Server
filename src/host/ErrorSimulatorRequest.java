@@ -221,17 +221,6 @@ public class ErrorSimulatorRequest implements Runnable {
 		  
 	 	packet.setData(newData);
  }
- 
-  private DatagramPacket formACKPacket(InetAddress address, int port, byte[] blockNumber) {
-	  	byte[] ackData = new byte[4];
-	    ackData[0] = 0;
-	    ackData[1] = ErrorSimulator.PacketType.ACK.getOpcode();
-	    ackData[2] = blockNumber[0];
-	    ackData[3] = blockNumber[1];
-	
-	    return new DatagramPacket(ackData, ackData.length, address, port);
-	
-  }
 
   public void simulateErrorAndSendPacket(DatagramPacket packet, int packetNumber) {
 	boolean sendThePacket = true;
@@ -283,44 +272,6 @@ public class ErrorSimulatorRequest implements Runnable {
  	     			
  	     			errorToSimulate.setWasExecuted(true);
  	     			
- 	     		}
- 	     		
- 	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_WRQ_PACKET) {
- 	     		if (getPacketType(requestPacket).equals(PacketType.WRITE)) {
- 	     			
- 	     			if (packetType.equals(PacketType.ACK) && packetNumber > 1) {
- 	 	     			try {
- 	 	     				DatagramSocket tempSocket = new DatagramSocket();
- 	 	     				
- 	 	         			System.out.println("\n **** Creating and sending an ACK packet for block 00 from another port ****");
- 	 	     				
- 	 	             	    // Construct an ACK for block number 00 to send to the client (to simulate a second ACK coming from another port)
- 	 	         		    DatagramPacket sendAckPacket = formACKPacket(clientAddress, clientPort, new byte[] {0, 0});
- 	 	         		    
- 	 	         		    // Send the packet
- 	 	         		    sendPacket(tempSocket, sendAckPacket);
- 	 	         		    
- 	 	         		    try {
- 	 	         		        receivePacket(tempSocket, 517);	
- 	 	         		    } catch (SocketTimeoutException e) {}
- 	 	         		    
- 	 	         		    
- 	 	         		    System.out.println("\n **** Resuming file transfer on original port ****");
- 	 	         		        		    
- 	 	         		    tempSocket.close();
- 	 	         		    
- 	 	         		    errorToSimulate.setWasExecuted(true);
- 	 	         			
- 	 	     			}  catch (SocketException se) {
- 	 	     	            se.printStackTrace();
- 	 	     	            System.exit(1);
- 	 	     	        }
- 	     			}
-
- 	     		    
- 	     		} else {
- 	     			System.out.println("\n **** NOTE: This error can only be simulated on a WRITE request...Aborting error simulation ****");
- 	     			errorToSimulate.setWasExecuted(true);
  	     		}
  	     		
  	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.INVALID_ACK_OPCODE) {
@@ -416,32 +367,106 @@ public class ErrorSimulatorRequest implements Runnable {
  	     		}
  	     	} else if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_PACKET) {
  	     		if (packetType.equals(errorToSimulate.getPacketType()) && packetNumber == errorToSimulate.getTargetPacketNumber()) {
- 	     			if (errorToSimulate.getPacketType().equals(PacketType.READ)) {
- 	     				System.out.println("\n **** Duplicating RRQ Packet ***"); 
- 	     			} else if (errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
- 	     				System.out.println("\n **** Duplicating WRQ Packet ***"); 
+ 	     			if (errorToSimulate.getPacketType().equals(PacketType.READ) || errorToSimulate.getPacketType().equals(PacketType.WRITE)) {
+ 	     				System.out.println("\n **** Duplicating " + errorToSimulate.getPacketType().name() + " Request Packet ***");
+ 	     				
+ 	 	 	     			// Send the first duplicate packet now
+ 	 	 	     			sendPacket(sendReceiveSocket, packet);
+ 	 	 	     				
+ 	 	         		    try {
+ 	 	         		    	DatagramPacket firstReceivedResponse = receivePacket(sendReceiveSocket, 517);
+ 	 	         		    	
+ 	 	         		    	
+ 	 	 	         		    DatagramPacket firstPacketToSend = new DatagramPacket(
+ 	 	 	         		    		firstReceivedResponse.getData(), 
+ 	 	 	         		    		firstReceivedResponse.getData().length,
+ 	 	 	         		    		clientAddress, clientPort);
+ 	 	 	         		    
+ 	 	 	         		    // Send the packet to the client
+ 	 	 	         		    sendPacket(sendReceiveSocket, firstPacketToSend);
+ 	 	 	         		    
+ 	 	 	 	     			// Delay
+ 	 		 	     			System.out.println("\n >>>> Waiting for " + errorToSimulate.getDelayTime() + " ms <<<<<<\n");
+ 	 	 	 	     			try {
+ 	 	 	 	     			    Thread.sleep(errorToSimulate.getDelayTime());
+ 	 	 	 	     			} catch(InterruptedException e){
+ 	 	 	 	     			    e.printStackTrace();
+ 	 	 	 	     			}
+ 	 	 	         		    
+ 	 	 	         		    
+ 	 	 	         		    try {
+ 	 	 	 	     				DatagramSocket tempSocket = new DatagramSocket();
+ 	 	 	 	     				
+ 	 	 	 	         		    // Send the second duplicate packet to the server now
+ 	 	 	 	         		    sendPacket(tempSocket, packet);
+ 	 	 	 	         		    
+ 	 	 	 	         		    DatagramPacket secondReceivedResponse = receivePacket(tempSocket, 517);
+ 	 	 	 	         		    
+ 	 	 	 	         		    DatagramPacket secondPacketToSend = new DatagramPacket(
+ 	 	 	 	         		    		secondReceivedResponse.getData(), 
+ 	 	 	 	         		    		secondReceivedResponse.getLength(),
+ 	 	 	 	         		    		clientAddress, clientPort);
+ 	 	 	 	     				
+ 	 	 	 	         		    // Send the packet to client
+ 	 	 	 	         		    sendPacket(tempSocket, secondPacketToSend);
+ 	 	 	 	         		    
+ 	 	 	 	         		    DatagramPacket clientResponsePacket = receivePacket(tempSocket, 517);
+ 	 	 	 	         		    
+ 	 	 	 	         		    DatagramPacket finalPacketToSendToServer = new DatagramPacket(
+ 	 	 	 	         		    		clientResponsePacket.getData(), 
+ 	 	 	 	         		    		clientResponsePacket.getLength(), 
+ 	 	 	 	         		    		serverAddress, secondReceivedResponse.getPort());
+ 	 	 	 	         		    
+ 	 	 	 	         		    // Send the packet to server
+ 	 	 	 	         		    sendPacket(tempSocket, finalPacketToSendToServer);
+ 	 	 	 	         		    
+ 	 	 	 	         		    DatagramPacket clientSentPacket = receivePacket(sendReceiveSocket, 517);
+ 	 	 	 	         		    sendPacket(sendReceiveSocket, new DatagramPacket(
+ 	 	 	 	         		    		clientSentPacket.getData(), 
+ 	 	 	 	         		    		clientSentPacket.getLength(), 
+ 	 	 	 	         		    		serverAddress, 
+ 	 	 	 	         		    	    firstReceivedResponse.getPort()));
+ 	 	 	 	         		    
+ 	 	 	 	         		    
+ 	 	 	 	         		    // Already sent both packets so no need to send more
+ 	 	 	 	         		    sendThePacket = false;
+ 	 	 	 	         		    
+ 	 	 	 	         		    errorToSimulate.setWasExecuted(true);
+ 	 	 	 	         		    
+ 	 	 	 	         		    
+ 	 	 	         		    } catch (SocketException se) {
+ 	 	 	 	     	            se.printStackTrace();
+ 	 	 	 	     	            System.exit(1);
+ 	 	 	 	     	        }
+ 	 	 	         		    
+ 	 	 	         		    
+ 	 	         		    } catch (SocketTimeoutException e) {
+ 	 	         		    	
+ 	 	         		    }
+ 	     				
+ 	     				
  	     			} else {
  	     	  			System.out.println("\n **** Duplicating " + errorToSimulate.getPacketType().name() + 
  	     	  					" Packet #" + packetNumber + 
  	     	  					". Delay time is " + errorToSimulate.getDelayTime() + " ms ****");
+ 	     	  			
+ 	 	     			// Send the first duplicate packet now
+ 	 	     			sendPacket(sendReceiveSocket, packet);
+ 	 	     			
+ 	 	     			System.out.println("\n >>>> Waiting for " + errorToSimulate.getDelayTime() + " ms <<<<<<\n");
+ 	 	     			
+ 	 	     			// Delay
+ 	 	     			try {
+ 	 	     			    Thread.sleep(errorToSimulate.getDelayTime());
+ 	 	     			} catch(InterruptedException e){
+ 	 	     			    e.printStackTrace();
+ 	 	     			}
+ 	 	     			
+ 	 	     			errorToSimulate.setWasExecuted(true);
+ 	 	     			
+ 	 	     			// The second duplicate packet will be sent when the try block exits
  	     			}
  	     			
- 	     			// Send the first duplicate packet now
- 	     			sendPacket(sendReceiveSocket, packet);
- 	     			
- 	     			System.out.println("\n >>>> Waiting for " + errorToSimulate.getDelayTime() + " ms <<<<<<\n");
- 	     			
- 	     			// Delay
- 	     			try {
- 	     			    Thread.sleep(errorToSimulate.getDelayTime());
- 	     			} catch(InterruptedException e){
- 	     			    e.printStackTrace();
- 	     			}
- 	     			
- 	     			errorToSimulate.setWasExecuted(true);
- 	     			
- 	     			// The second duplicate packet will be sent when the try block exits
-
  	     		}
  	     	}
  		}

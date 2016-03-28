@@ -16,7 +16,7 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.io.SyncFailedException;
+import java.util.Objects;
 
 import client.IllegalTftpOperationException;
 import client.UnknownTransferIdException;
@@ -24,12 +24,16 @@ import util.Keyboard;
 
 public class Client {
 	
+	public static final Mode DEFAULT_MODE = Mode.NORMAL;
+	
 	public static final String FILE_PATH = "src/client/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
+	public static final boolean ALLOW_FILE_OVERWRITING = true;
 	
 	
+
 	public static enum Mode { 
-		NORMAL, TEST 
+		NORMAL, TEST // NORMAL sends requests to port 69 while TEST sends to port 68
 	};
 	
 	public static enum PacketType {
@@ -55,8 +59,12 @@ public class Client {
 	}
 	
 	public enum ErrorType {
+		FILE_NOT_FOUND((byte) 1),
+		ACCESS_VIOLATION((byte) 2),
+		DISK_FULL((byte) 3),
 		ILLEGAL_TFTP_OPERATION((byte) 4),
-		UNKNOWN_TRANSFER_ID((byte) 5);
+		UNKNOWN_TRANSFER_ID((byte) 5),
+		FILE_ALREADY_EXISTS((byte) 6);
 		
 		private byte errorCode;
 		
@@ -92,6 +100,10 @@ public class Client {
 	        System.exit(1);
 		}
 	 }
+	
+	public Mode getMode() {
+		return mode;
+	}
 	
 	
 	public void printPacketInfo(DatagramPacket packet, PacketAction action) {
@@ -180,8 +192,14 @@ public class Client {
 	
 	
 	private byte[] incrementBlockNumber(byte[] currentBlockNum) {
-		short blockNum = ByteBuffer.wrap(currentBlockNum).getShort();
 		
+		if (currentBlockNum[1] == (byte) 127) {
+			currentBlockNum[0] = (byte) (++currentBlockNum[0]);
+			currentBlockNum[1] = 0;
+			return currentBlockNum;
+		}
+		
+		short blockNum = ByteBuffer.wrap(currentBlockNum).getShort();
 		byte[] bytes = new byte[2];
 		ByteBuffer buffer = ByteBuffer.allocate(bytes.length);
 		blockNum++;
@@ -248,7 +266,7 @@ public class Client {
 				
 		} else {
 			if (packet.getPort() != expectedPort) {
-				throw new UnknownTransferIdException("Unknown port: " + packet.getPort());
+				throw new UnknownTransferIdException("Unknown port");
 			} else {
 				throw new UnknownTransferIdException("DATA packet received from invalid address: " + packet.getAddress());
 			}
@@ -300,7 +318,7 @@ public class Client {
 			
 		} else {
 			if (packet.getPort() != expectedPort) {
-				throw new UnknownTransferIdException("Unknown port: " + packet.getPort());
+				throw new UnknownTransferIdException("Unknown port");
 			} else {
 				throw new UnknownTransferIdException("ACK packet received from invalid address: " + packet.getAddress());
 			}
@@ -374,12 +392,24 @@ public class Client {
 		// Check if the packet is an error packet to begin with
 		if (data[0] == 0 && data[1] == PacketType.ERROR.getOpcode()) {
 			
-			// Check if the error is an illegal TFTP operation
-			if (data[2] == 0 && data[3] == ErrorType.ILLEGAL_TFTP_OPERATION.getErrorCode()) {
+			
+			if (data[2] == 0 && data[3] == ErrorType.FILE_NOT_FOUND.getErrorCode()) {
+				return ErrorType.FILE_NOT_FOUND;
+				
+			} else if (data[2] == 0 && data[3] == ErrorType.ACCESS_VIOLATION.getErrorCode()) {
+				return ErrorType.ACCESS_VIOLATION;
+				
+			} else if (data[2] == 0 && data[3] == ErrorType.DISK_FULL.getErrorCode()) {
+				return ErrorType.DISK_FULL;
+				
+		    } else if (data[2] == 0 && data[3] == ErrorType.ILLEGAL_TFTP_OPERATION.getErrorCode()) {
 				return ErrorType.ILLEGAL_TFTP_OPERATION;
 				
 			} else if (data[2] == 0 && data[3] == ErrorType.UNKNOWN_TRANSFER_ID.getErrorCode()) {
 				return ErrorType.UNKNOWN_TRANSFER_ID;
+				
+			} else if (data[2] == 0 && data[3] == ErrorType.FILE_ALREADY_EXISTS.getErrorCode()) {
+				return ErrorType.FILE_ALREADY_EXISTS;
 			}
 			
 		}
@@ -563,7 +593,12 @@ public class Client {
 				    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error packet...Ending session...***");
 				    				
 				                	in.close();
-				                	
+				    				return;
+				    				
+				    			} else if (errorType.equals(ErrorType.DISK_FULL)) {
+				    				System.out.println("\n*** Received DISK_FULL error packet...Ending session...***");
+				    				
+				                	in.close();
 				    				return;
 				    			}
 				    		}
@@ -627,7 +662,7 @@ public class Client {
 		}
 
     	try {
-    		File file = new File("src/client/files/" + fileName);
+    		File file = new File(FILE_PATH + fileName);
     		FileOutputStream fileOutputStream = new FileOutputStream(file);
     		BufferedOutputStream out = new BufferedOutputStream(fileOutputStream);
     			
@@ -644,26 +679,27 @@ public class Client {
     		    		    // Update the length of the file data
     		    		    dataLength = getFileDataFromDataPacket(receivePacket).length;
     				    	
-    					    // Write to file
-    		    		    if(file.exists()) {
-    		    		    	// Note: our current setup overwrites files
-    		    		    	/*
-     		    		       System.out.println("*** TFTP ERROR 06 : File " + file + " already exists");
-     		    		       System.out.println("*** Ending session...");
-     		    		       return;
-     		    		       */
+						    
+    		    		    // Check to see if disk is full
+    		    		    if (file.getUsableSpace() < dataLength) {
+    		    		    	System.out.println("\n*** TFTP ERROR 03: Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
+     		    		        System.out.println("*** Ending session...");
+     		    		        
+     		    		        // Now send error packet to server
+     		    		        // Form the error packet
+        		            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+        		            			receivePacket.getPort(), 
+        		            			ErrorType.DISK_FULL, 
+        		            			"(Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.)");
+        		            	
+        		            	// Send the error packet
+        		            	sendPacket(sendReceiveSocket, sendErrorPacket);
+        		            	
+     		    		        return;
     		    		    }
-    		    		    
-    					    //check to see if the disk is full
-    		    		    try {
-        					    fileOutputStream.getFD().sync();
-    		    		    }  catch (SyncFailedException e) {
-        		    	    	System.out.println("*** TFTP ERROR 03: Disk full!");
-        		    	    	System.out.println("*** Ending session...");
-        		    	    	return;
-        		    	    }
-    					    
+						    
     					    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
+
     					    
     					    
     		    			// Construct an ACK packet
@@ -730,6 +766,12 @@ public class Client {
     		            	
     		            	// Send the error packet
     		            	sendPacket(sendReceiveSocket, sendErrorPacket);
+    		            	
+    		    		    // Wait to receive a packet back from the server
+    		    		    receivePacket = receivePacket(sendReceiveSocket, 517);
+    		    		    
+    		    		    // Move to the beginning of the loop
+    		    		    continue;
     		    	    	
     		    	    } catch (PacketAlreadyReceivedException packetReceivedException) {
     		    	    	System.out.println("\n*** The received DATA packet was already received beforehand...Sending ACK packet for it... *** \n");
@@ -789,25 +831,8 @@ public class Client {
     		    }
 
     	    	
-    	    } while(dataLength == 512 || notDataPacket);
+    	    } while(dataLength == 512 || notDataPacket || receivePacket.getPort() != connectionPort);
     	    
-    	    
-		    // Write the data from the last DATA packet to file
-    	    /*
-		    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
-    	    
-    		// Construct the final ACK
-    	    try {
-    	    	sendPacket = formACKPacket(receivePacket.getAddress(), receivePacket.getPort(), blockNumber);
-    	    } catch (UnknownHostException e) {
-    	    	out.close();
-    	        e.printStackTrace();
-    	        System.exit(1);
-    	    }
-    	    
-    	    // Send the final ACK packet
-    	    sendPacket(sendReceiveSocket, sendPacket);
-    	    */
     	    
     	    
     	    out.close();
@@ -841,13 +866,26 @@ public class Client {
 	        System.exit(1);
 		}
 		
-		if (type.equals(PacketType.WRITE)) {
+		if (type.equals(PacketType.READ)) {
+			
+			if (!ALLOW_FILE_OVERWRITING) {
+				// Check if file already exists
+				File fileToReceive = new File(FILE_PATH + fileName);
+				
+				if (fileToReceive.exists()) {
+					System.out.println("\n*** TFTP ERROR 06: File " + fileToReceive.getPath() + " already exists...Overwrite not allowed...");
+					System.out.println("*** Ending session...\n");
+					return;	
+				}
+			}
+			
+		} else if (type.equals(PacketType.WRITE)) {
 			// Check if file exists
 			File fileToSend = new File(FILE_PATH + fileName);
 			
 			if (!fileToSend.exists()) {
-				System.out.println("*** TFTP ERROR 01: File " + FILE_PATH + fileToSend.getPath() + " not found...");
-				System.out.println("Ending session...");
+				System.out.println("\n*** TFTP ERROR 01: File " + fileToSend.getPath() + " not found...");
+				System.out.println("*** Ending session...\n");
 				return;
 			}
 		}
@@ -982,7 +1020,9 @@ public class Client {
 	
 	public static void main(String args[]) {
 		
-		Client newClient = new Client(Mode.NORMAL);
+		Client newClient = new Client(DEFAULT_MODE);
+		
+		System.out.println("Client running in " + newClient.getMode().name() + " mode");
 		
 		while(true) {
 			System.out.println("------------------------------------------------------");
@@ -998,7 +1038,7 @@ public class Client {
 				
 			} else if (input == '1') { // READ request
 				String fileName = "";
-				String mode = "";
+				String mode = "netascii";
 				
 				System.out.print("Enter the name of the file (if * typed then testFileFromServer.txt will be used): ");
 				fileName = Keyboard.getString();
@@ -1006,12 +1046,6 @@ public class Client {
 					fileName = "testFileFromServer.txt";
 				}
 				
-				System.out.println("Enter the mode (if * typed then netascii will be used): ");
-				mode = Keyboard.getString();
-				
-				if (mode.trim().equals("*")) {
-					mode = "netascii";
-				}
 				
 			    newClient.sendAndReceive(PacketType.READ, mode, fileName);
 				
@@ -1020,21 +1054,14 @@ public class Client {
 				
 			} else if (input == '2') { // WRITE request
 				String fileName = "";
-				String mode = "";
+				String mode = "netascii";
 				
 				System.out.print("Enter the name of the file (if * typed then testFileFromClient.txt will be used): ");
 				fileName = Keyboard.getString();
 				if (fileName.trim().equals("*")) {
 					fileName = "testFileFromClient.txt";
 				}
-				
-				System.out.println("Enter the mode (if * typed then netascii will be used): ");
-				mode = Keyboard.getString();
-				
-				if (mode.trim().equals("*")) {
-					mode = "netascii";
-				}
-				
+
 
 			    newClient.sendAndReceive(PacketType.WRITE, mode, fileName);
 

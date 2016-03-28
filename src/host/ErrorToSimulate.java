@@ -10,16 +10,15 @@ public class ErrorToSimulate {
 		EMPTY_FILENAME(2, "Empty filename"),
 		EMPTY_MODE(3, "Empty mode"),
 		INVALID_MODE(4, "Invalid mode"),
-		DUPLICATE_WRQ_PACKET(5, "Duplicate WRQ packet (will cause 2 ACK's to be sent from different ports/TID's)"),
-		INVALID_ACK_OPCODE(6, "Invalid ACK packet TFTP opcode"),
-		INVALID_ACK_BLOCK_NUMBER(7, "Invalid ACK packet block number"),
-		INVALID_DATA_OPCODE(8, "Invalid DATA packet TFTP opcode"),
-		INVALID_DATA_BLOCK_NUMBER(9, "Invalid DATA packet block number"),
-		LARGE_DATA_PACKET(10, "Large DATA packet (larger than 516 bytes)"),
+		INVALID_ACK_OPCODE(5, "Invalid ACK packet TFTP opcode"),
+		INVALID_ACK_BLOCK_NUMBER(6, "Invalid ACK packet block number"),
+		INVALID_DATA_OPCODE(7, "Invalid DATA packet TFTP opcode"),
+		INVALID_DATA_BLOCK_NUMBER(8, "Invalid DATA packet block number"),
+		LARGE_DATA_PACKET(9, "Large DATA packet (larger than 516 bytes)"),
 		
-		LOSE_PACKET(11, "Lose a packet"),
-		DELAY_PACKET(12, "Delay a packet"),
-		DUPLICATE_PACKET(13, "Duplicate a packet");
+		LOSE_PACKET(10, "Lose a packet"),
+		DELAY_PACKET(11, "Delay a packet"),
+		DUPLICATE_PACKET(12, "Duplicate a packet");
 		
 		private int errorNumber;
 		private String errorString;
