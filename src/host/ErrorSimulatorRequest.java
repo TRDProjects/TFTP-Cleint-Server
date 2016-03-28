@@ -62,8 +62,15 @@ public class ErrorSimulatorRequest implements Runnable {
  
  
   public void printPacketInfo(DatagramPacket packet, ErrorSimulator.PacketAction action) {
+	String packetType = "";
+	try {
+		packetType = getPacketType(packet).name();
+	} catch (InvalidPacketTypeException e) {
+		packetType = "";
+	}
+	
     System.out.println("\n");
-    System.out.println("ErrorSimulator (" + Thread.currentThread() + "): " + (action.equals(PacketAction.SEND) ? "Sending " : "Received ") + "packet:");
+    System.out.println("ErrorSimulator (" + Thread.currentThread() + "): " + (action.equals(PacketAction.SEND) ? "Sending " : "Received ") + packetType + " packet:");
     System.out.println("   " + (action.equals(PacketAction.SEND) ? "To " : "From ") + "host: " + packet.getAddress());
     System.out.println("   " + (action.equals(PacketAction.SEND) ? "Destination host " : "Host ") + "port: " + packet.getPort());
     int len = packet.getLength();

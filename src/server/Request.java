@@ -55,8 +55,15 @@ public class Request implements Runnable {
 	}
 	
 	public void printPacketInfo(DatagramPacket packet, Server.PacketAction action) {
+		String packetType = "";
+		try {
+			packetType = getPacketType(packet).name();
+		} catch (InvalidPacketTypeException e) {
+			packetType = "";
+		}
+		
 		System.out.println("\n");
-		System.out.println("Server (Thread ID " + Thread.currentThread().getId() + "): " + (action.equals(PacketAction.SEND) ? "Sending " : "Received ") + "packet:");
+		System.out.println("Server (Thread ID " + Thread.currentThread().getId() + "): " + (action.equals(PacketAction.SEND) ? "Sending " : "Received ") + packetType + " packet:");
 		System.out.println("   " + (action.equals(PacketAction.SEND) ? "To " : "From ") + "host: " + packet.getAddress());
 		System.out.println("   " + (action.equals(PacketAction.SEND) ? "Destination host " : "Host ") + "port: " + packet.getPort());
 		int len = packet.getLength();
@@ -439,6 +446,7 @@ public class Request implements Runnable {
         byte[] blockNumber = {0, 1};
         
         boolean receivedDuplicateAck = false;
+        boolean sendLastZeroByteDataPacket = false;
         
 		// Since the server will be sending the DATA packets, we set a timeout on the socket
 		try {
@@ -452,16 +460,37 @@ public class Request implements Runnable {
         	BufferedInputStream in;
         	
 	        try {
-	        	in = new BufferedInputStream(new FileInputStream(Server.FILE_PATH + fileName));
+	        	File fileToRead = new File(Server.FILE_PATH + fileName);
+	        	
+	        	in = new BufferedInputStream(new FileInputStream(fileToRead));
+	        	
+	        	if (fileToRead.length() % 512 == 0) {
+	        		sendLastZeroByteDataPacket = true;
+	        	}
+	        	
 	        } catch(FileNotFoundException fileNotFoundException) {
-	    		System.out.println("FileNotFoundException Thrown: " + fileNotFoundException.getMessage());
-	    		System.out.println("Sending error package...");
+	        	
+	        	DatagramPacket sendErrorPacket;
+	        	
+	    		if (fileNotFoundException.getMessage().contains("Access is denied")) {
+		    		System.out.println("*** Access violation: " + fileNotFoundException.getMessage());
+		    		
+		    		// Form the error packet
+		    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
+		    				requestPacket.getPort(),
+		    				ErrorType.ACCESS_VIOLATION,
+		    				fileNotFoundException.getMessage());
+	    		} else {
+		    		System.out.println("*** File not found: " + fileNotFoundException.getMessage());
+		    		
+		    		// Form the error packet
+		    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
+			    				requestPacket.getPort(),
+			    				ErrorType.FILE_NOT_FOUND,
+			    				fileNotFoundException.getMessage());
+	    		}
 	    		
-	    		// Form the error packet
-	    		DatagramPacket sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
-	    				requestPacket.getPort(),
-	    				ErrorType.FILE_NOT_FOUND,
-	    				fileNotFoundException.getMessage());
+	    		System.out.println("*** Sending error packet...");
 	    		
 	    		// Send the error packet
 	    		sendPacket(sendReceiveSocket, sendErrorPacket);
@@ -494,12 +523,22 @@ public class Request implements Runnable {
 	        }
         	
 	        // Read the file in 512 byte chunks
-	        while ((n = in.read(dataFromFile)) != -1) {
+	        while ((n = in.read(dataFromFile)) != -1 || sendLastZeroByteDataPacket) {
+	        	
+	        	DatagramPacket sendDataPacket;
+	        	
+	        	if (sendLastZeroByteDataPacket && n == -1) {
+		        	sendDataPacket = formDataPacket(requestPacket.getAddress(), requestPacket.getPort(), 
+		        			new byte[]{0}, 1, 
+		        			blockNumber);
+		        	
+		        	sendLastZeroByteDataPacket = false;
+	        	} else {
+		        	sendDataPacket = formDataPacket(requestPacket.getAddress(), requestPacket.getPort(), 
+		        			dataFromFile, n, 
+		        			blockNumber);
+	        	}
 	        	     	
-	        	DatagramPacket sendDataPacket = formDataPacket(requestPacket.getAddress(), requestPacket.getPort(), 
-	        			dataFromFile, n, 
-	        			blockNumber);
-	        
 	    	    
 	    	    // Send the packet
 	    	    sendPacket(sendReceiveSocket, sendDataPacket);

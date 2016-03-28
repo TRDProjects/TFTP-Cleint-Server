@@ -24,7 +24,7 @@ import util.Keyboard;
 
 public class Client {
 	
-	public static final Mode DEFAULT_MODE = Mode.NORMAL;
+	public static final Mode DEFAULT_MODE = Mode.TEST;
 	
 	public static final String FILE_PATH = "src/client/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
@@ -107,8 +107,15 @@ public class Client {
 	
 	
 	public void printPacketInfo(DatagramPacket packet, PacketAction action) {
+		String packetType = "";
+		try {
+			packetType = getPacketType(packet).name();
+		} catch (InvalidPacketTypeException e) {
+			packetType = "";
+		}
+		
 		System.out.println("\n");
-		System.out.println("Client: " + (action.equals(PacketAction.SEND) ? "Sending " : "Received ") + "packet:");
+		System.out.println("Client: " + (action.equals(PacketAction.SEND) ? "Sending " : "Received ") + packetType + " packet:");
 		System.out.println("   " + (action.equals(PacketAction.SEND) ? "To " : "From ") + "host: " + packet.getAddress());
 		System.out.println("   " + (action.equals(PacketAction.SEND) ? "Destination host " : "Host ") + "port: " + packet.getPort());
 		int len = packet.getLength();
