@@ -712,6 +712,7 @@ public class Request implements Runnable {
 			    				ErrorType.FILE_NOT_FOUND,
 			    				fileNotFoundException.getMessage());
 	    		}
+	    		
 	    		System.out.println("Sending error packet...");
 	    		
 	    		// Send the error packet
