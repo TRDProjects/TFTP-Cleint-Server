@@ -1071,31 +1071,32 @@ public class Client {
 			break;
 		}
 		
-		//Select server address
-		while(true) {
-			String serverAddress = "";
-			System.out.println("------------------------------------------------------");
-			System.out.println("Server address selection: \n");
-			System.out.println("Enter the server address of the Server being run (if * is typed then this computer's address will be used):");
-			
-			serverAddress = Keyboard.getString();
-			
-			if (serverAddress.trim().equals("*")) {
-				try {
-					newClient.serverAddress = InetAddress.getLocalHost();
-				} catch (UnknownHostException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+		if (newClient.mode == Mode.NORMAL) {
+			//Select server address
+			while(true) {
+				String serverAddress = "";
+				System.out.println("------------------------------------------------------");
+				System.out.println("Server address selection: \n");
+				System.out.println("Enter the server address of the Server being run (if * is typed then this computer's address will be used):");
+				
+				serverAddress = Keyboard.getString();
+				
+				if (serverAddress.trim().equals("*")) {
+					try {
+						newClient.serverAddress = InetAddress.getLocalHost();
+					} catch (UnknownHostException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					break;
 				}
-				break;
-			}
-			try {
-				newClient.serverAddress = InetAddress.getByName(serverAddress);
-			} catch (UnknownHostException e) {
-				System.out.println("Unknown host exception thrown - try again"); 
+				try {
+					newClient.serverAddress = InetAddress.getByName(serverAddress);
+				} catch (UnknownHostException e) {
+					System.out.println("Unknown host exception thrown - try again"); 
+				}
 			}
 		}
-		
 		
 		while(true) {
 			System.out.println("------------------------------------------------------");

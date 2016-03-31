@@ -3,7 +3,9 @@ package host;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 
 import util.Keyboard;
@@ -11,7 +13,7 @@ import util.Keyboard;
 
 public class ErrorSimulator {
 	
-	public static final String SERVER_ADDRESS = "localhost";
+	public static String SERVER_ADDRESS = "localhost";
 	public static final int SERVER_PORT = 69;
 	
 	public enum PacketAction {
@@ -65,6 +67,31 @@ public class ErrorSimulator {
 		System.out.println("       - Bytes: " + Arrays.toString(dataString.getBytes()));
 	}
 	
+	public static void getServerAddressFromUser() {
+		while(true) {
+			String serverAddress = "";
+			System.out.println("------------------------------------------------------");
+			System.out.println("Server address selection: \n");
+			System.out.println("Enter the server address of the Server being run (if * is typed then this computer's address will be used):");
+			
+			serverAddress = Keyboard.getString();
+			
+			if (serverAddress.trim().equals("*")) {
+				try {
+					SERVER_ADDRESS = InetAddress.getLocalHost().getHostAddress();
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+			}
+			try {
+				SERVER_ADDRESS = InetAddress.getByName(serverAddress).getHostAddress();
+			} catch (UnknownHostException e) {
+				System.out.println("Unknown host exception thrown - try again"); 
+			}
+		}
+	}
 	
 	public ErrorToSimulate getErrorToSimulateInputFromUser() {
 		  
@@ -322,6 +349,7 @@ public class ErrorSimulator {
 	 
 	
 	public void receiveFromClientAndSendToServer() {
+		
 		
 		ErrorToSimulate errorToSimulate = getErrorToSimulateInputFromUser();
 		
