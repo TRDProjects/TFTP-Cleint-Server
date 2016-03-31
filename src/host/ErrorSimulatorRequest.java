@@ -9,7 +9,6 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 
 
@@ -32,7 +31,7 @@ public class ErrorSimulatorRequest implements Runnable {
   private int serverRequestThreadPort;
   private int clientPort;
   
-  public ErrorSimulatorRequest(DatagramPacket requestPacket, ErrorToSimulate errorToSimulate) {
+  public ErrorSimulatorRequest(InetAddress serverAddress, DatagramPacket requestPacket, ErrorToSimulate errorToSimulate) {
     this.requestPacket = requestPacket;
     this.errorToSimulate = errorToSimulate;
     this.currentAckPacketNumber = 0;
@@ -50,13 +49,7 @@ public class ErrorSimulatorRequest implements Runnable {
     
     this.clientAddress = requestPacket.getAddress();
     this.clientPort = requestPacket.getPort();
-    
-    try {
-    	serverAddress = InetAddress.getByName(ErrorSimulator.SERVER_ADDRESS);
-    } catch (UnknownHostException e) {
-        e.printStackTrace();
-        System.exit(1);
-    }
+    this.serverAddress = serverAddress;
   }
   
  

@@ -25,7 +25,6 @@ import util.Keyboard;
 public class Client {
 	
 	public static Mode DEFAULT_MODE = Mode.NORMAL;
-	
 	public static String FILE_PATH = "src/client/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
 	public static final boolean ALLOW_FILE_OVERWRITING = true;

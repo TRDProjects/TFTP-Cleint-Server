@@ -13,7 +13,6 @@ import util.Keyboard;
 
 public class ErrorSimulator {
 	
-	public static String SERVER_ADDRESS = "localhost";
 	public static final int SERVER_PORT = 69;
 	
 	public enum PacketAction {
@@ -42,6 +41,8 @@ public class ErrorSimulator {
 	private DatagramPacket receivePacketClient;
 	private DatagramSocket receiveSocket;
 	
+	private InetAddress serverAddress;
+	
 	
 	public ErrorSimulator() {
 	    try {
@@ -50,6 +51,13 @@ public class ErrorSimulator {
             se.printStackTrace();
             System.exit(1);
         }
+	    
+	    try {
+		    this.serverAddress = InetAddress.getLocalHost();
+	    } catch (UnknownHostException e) {
+            e.printStackTrace();
+            System.exit(1);
+	    }
 	    
 	}
 	
@@ -67,18 +75,18 @@ public class ErrorSimulator {
 		System.out.println("       - Bytes: " + Arrays.toString(dataString.getBytes()));
 	}
 	
-	public static void getServerAddressFromUser() {
+	public void getServerAddressFromUser() {
 		while(true) {
-			String serverAddress = "";
+			String serverAddr = "";
 			System.out.println("------------------------------------------------------");
 			System.out.println("Server address selection: \n");
 			System.out.println("Enter the server address of the Server being run (if * is typed then this computer's address will be used):");
 			
-			serverAddress = Keyboard.getString();
+			serverAddr = Keyboard.getString();
 			
-			if (serverAddress.trim().equals("*")) {
+			if (serverAddr.trim().equals("*")) {
 				try {
-					SERVER_ADDRESS = InetAddress.getLocalHost().getHostAddress();
+					serverAddress = InetAddress.getLocalHost();
 				} catch (UnknownHostException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -86,7 +94,7 @@ public class ErrorSimulator {
 				break;
 			}
 			try {
-				SERVER_ADDRESS = InetAddress.getByName(serverAddress).getHostAddress();
+				serverAddress = InetAddress.getByName(serverAddr);
 			} catch (UnknownHostException e) {
 				System.out.println("Unknown host exception thrown - try again"); 
 			}
@@ -371,7 +379,7 @@ public class ErrorSimulator {
 	    
 	    System.out.println("\n** Error Sim (port 68): received packet from " + receivePacketClient.getAddress());
 	    
-	    Thread requestThread = new Thread(new ErrorSimulatorRequest(receivePacketClient, errorToSimulate), 
+	    Thread requestThread = new Thread(new ErrorSimulatorRequest(serverAddress, receivePacketClient, errorToSimulate), 
 	    		"ErrorSim Request Thread (For Host " + receivePacketClient.getAddress() + ")");
 	    
 	    System.out.println("  ** Starting new thread with ID " + requestThread.getId() + "...\n");
@@ -392,6 +400,8 @@ public class ErrorSimulator {
 	
 	public static void main(String args[]) {
 		ErrorSimulator newErrorSim = new ErrorSimulator();
+		
+		newErrorSim.getServerAddressFromUser();
 		
 		while (true) {
 			newErrorSim.receiveFromClientAndSendToServer();
