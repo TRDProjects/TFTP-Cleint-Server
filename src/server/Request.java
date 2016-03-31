@@ -38,11 +38,13 @@ public class Request implements Runnable {
 	private InetAddress clientAddress;
 	
 	private String fileName;
+	private String filePath;
 	
 	
-	public Request(RunningThreadCounter threadCounter, DatagramPacket requestPacket) {
+	public Request(RunningThreadCounter threadCounter, DatagramPacket requestPacket, String filePath) {
 		this.requestPacket = requestPacket;
 		this.fileName = getFileName(requestPacket.getData());
+		this.filePath = filePath;
 		
 	    try {
 	    	sendReceiveSocket = new DatagramSocket();
@@ -467,7 +469,7 @@ public class Request implements Runnable {
         	BufferedInputStream in;
         	
 	        try {
-	        	File fileToRead = new File(Server.FILE_PATH + fileName);
+	        	File fileToRead = new File(filePath + fileName);
 	        	
 	        	in = new BufferedInputStream(new FileInputStream(fileToRead));
 	        	
@@ -565,7 +567,7 @@ public class Request implements Runnable {
 	            		receivePacket = receivePacket(sendReceiveSocket, 517);
 	            		
             		} catch (SocketTimeoutException secondTimoutException) {
-            			System.out.println("\n ****** Client Unreachable...Closing Thread ******");
+            			System.out.println("\n ****** Client Unreachable...Closing Thread " + Thread.currentThread().getId() + "...\n");
             			in.close();
             			Thread.currentThread().interrupt();
             			return;
@@ -653,7 +655,7 @@ public class Request implements Runnable {
 		    	    	    }
 		    	    	      
 		    	    	} else if (packetType.equals(PacketType.ERROR)) {
-		    				System.out.println("\n*** Received error packet...Closing Thread...***");
+		    				System.out.println("\n*** Received error packet...Closing Thread " + Thread.currentThread().getId() + " ***");
 		    				in.close();
 		    				Thread.currentThread().interrupt();
 		    				return;
@@ -738,7 +740,7 @@ public class Request implements Runnable {
 	    	
 	    	//Catch file not found/security exceptions
 	    	try {
-	    		file = new File (Server.FILE_PATH + fileName);
+	    		file = new File (filePath + fileName);
 	    		fileOutputStream = new FileOutputStream(file);
 	    		out = new BufferedOutputStream(fileOutputStream);
 	    	} catch (FileNotFoundException fileNotFoundException) {

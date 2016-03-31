@@ -12,7 +12,7 @@ import util.Keyboard;
 public class Server implements Runnable {
 	
 	public static final int PORT = 69;
-	public static final String FILE_PATH = "src/server/files/";
+	public static final String DEFAULT_FILE_PATH = "src/server/files/";
 	public static final boolean ALLOW_FILE_OVERWRITING = true;
 	
 	public static enum PacketType {
@@ -71,6 +71,8 @@ public class Server implements Runnable {
 	
 	private RunningThreadCounter threadCounter;
 	
+	private String filePath;
+	
 	
 	public Server() {
 		try {
@@ -80,7 +82,8 @@ public class Server implements Runnable {
             System.exit(1);
 		}
 		
-		threadCounter = new RunningThreadCounter();
+		this.threadCounter = new RunningThreadCounter();
+		this.filePath = DEFAULT_FILE_PATH;
 		
 	}
 	
@@ -135,7 +138,7 @@ public class Server implements Runnable {
 
 	    
 	    
-	    Thread requestThread = new Thread(new Request(threadCounter, receivePacket), 
+	    Thread requestThread = new Thread(new Request(threadCounter, receivePacket, filePath), 
 	    		"Server Request Thread (For Host " + receivePacket.getAddress() + ")");
 	    
 	    System.out.println("\n\n >>> Server: starting new request thread with ID " + requestThread.getId() + "\n\n");
@@ -172,6 +175,22 @@ public class Server implements Runnable {
 	
     public static void main(String args[]) {
     	Server newServer = new Server();
+    	
+		//Select file path
+		while(true) {
+
+			System.out.println("------------------------------------------------------");
+			System.out.println("File path selection: \n");
+			System.out.println("Enter the name of the file path for the Server to use (if * is typed then src/server/files/ will be used):");
+
+			newServer.filePath = Keyboard.getString();
+			
+			if (newServer.filePath.trim().equals("*")) {
+				newServer.filePath = DEFAULT_FILE_PATH;
+			}
+				
+			break;
+		}
     	
         Thread serverThread = new Thread(newServer, "Server Main Thread");
         
