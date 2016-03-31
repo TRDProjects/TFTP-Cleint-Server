@@ -24,9 +24,9 @@ import util.Keyboard;
 
 public class Client {
 	
-	public static final Mode DEFAULT_MODE = Mode.NORMAL;
+	public static Mode DEFAULT_MODE = Mode.NORMAL;
 	
-	public static final String FILE_PATH = "src/client/files/";
+	public static String FILE_PATH = "src/client/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
 	public static final boolean ALLOW_FILE_OVERWRITING = true;
 	
@@ -1029,7 +1029,73 @@ public class Client {
 		
 		Client newClient = new Client(DEFAULT_MODE);
 		
-		System.out.println("Client running in " + newClient.getMode().name() + " mode");
+		//Select mode (NORMAL/TEST)
+		while(true) {
+			System.out.println("------------------------------------------------------");
+			System.out.println("Mode selection: \n");
+			System.out.println("Select from the following options by entering a number (i.e. 1): \n");
+			System.out.println("1. Normal mode (No error simulator) (Default)");
+			System.out.println("2. Test mode (With error simulator)");
+			
+			char input = Keyboard.getCharacter();
+			
+			if (input == '1') { //Normal mode
+				newClient.mode = Mode.NORMAL;
+				System.out.println("Normal mode set.");
+				break;
+			} else if (input == '2') { //Test mode
+				newClient.mode = Mode.TEST;
+				System.out.println("Test mode set.");
+				break;
+			} else {
+				System.out.println("Invalid option");
+			}
+		}
+		
+		//Select file path
+		while(true) {
+			String filePath = "";
+			
+			System.out.println("------------------------------------------------------");
+			System.out.println("File path selection: \n");
+			System.out.println("Enter the name of the file path for the Client to use (if * is typed then src/client/files/ will be used):");
+
+			filePath = Keyboard.getString();
+			
+			if (filePath.trim().equals("*")) {
+				filePath = "src/client/files/";
+			}
+			
+			FILE_PATH = filePath;
+			
+			break;
+		}
+		
+		//Select server address
+		while(true) {
+			String serverAddress = "";
+			System.out.println("------------------------------------------------------");
+			System.out.println("Server address selection: \n");
+			System.out.println("Enter the server address of the Server being run (if * is typed then this computer's address will be used):");
+			
+			serverAddress = Keyboard.getString();
+			
+			if (serverAddress.trim().equals("*")) {
+				try {
+					newClient.serverAddress = InetAddress.getLocalHost();
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+			}
+			try {
+				newClient.serverAddress = InetAddress.getByName(serverAddress);
+			} catch (UnknownHostException e) {
+				System.out.println("Unknown host exception thrown - try again"); 
+			}
+		}
+		
 		
 		while(true) {
 			System.out.println("------------------------------------------------------");
