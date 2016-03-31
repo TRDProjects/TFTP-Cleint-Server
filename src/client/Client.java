@@ -1091,6 +1091,7 @@ public class Client {
 				}
 				try {
 					newClient.serverAddress = InetAddress.getByName(serverAddress);
+					break;
 				} catch (UnknownHostException e) {
 					System.out.println("Unknown host exception thrown - try again"); 
 				}
