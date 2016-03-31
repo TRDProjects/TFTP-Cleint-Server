@@ -95,6 +95,7 @@ public class ErrorSimulator {
 			}
 			try {
 				serverAddress = InetAddress.getByName(serverAddr);
+				break;
 			} catch (UnknownHostException e) {
 				System.out.println("Unknown host exception thrown - try again"); 
 			}

@@ -25,7 +25,7 @@ import util.Keyboard;
 public class Client {
 	
 	public static Mode DEFAULT_MODE = Mode.NORMAL;
-	public static String FILE_PATH = "src/client/files/";
+	public static String DEFAULT_FILE_PATH = "src/client/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
 	public static final boolean ALLOW_FILE_OVERWRITING = true;
 	
@@ -83,8 +83,11 @@ public class Client {
 	
 	private InetAddress serverAddress;
 	
-	public Client(Mode mode) {
-		this.mode = mode;
+	private String filePath;
+	
+	public Client() {
+		this.mode = DEFAULT_MODE;
+		this.filePath = DEFAULT_FILE_PATH;
 		
 	    try {
 	        sendReceiveSocket = new DatagramSocket();
@@ -668,7 +671,7 @@ public class Client {
 		}
 
     	try {
-    		File file = new File(FILE_PATH + fileName);
+    		File file = new File(filePath + fileName);
     		FileOutputStream fileOutputStream = new FileOutputStream(file);
     		BufferedOutputStream out = new BufferedOutputStream(fileOutputStream);
     			
@@ -876,7 +879,7 @@ public class Client {
 			
 			if (!ALLOW_FILE_OVERWRITING) {
 				// Check if file already exists
-				File fileToReceive = new File(FILE_PATH + fileName);
+				File fileToReceive = new File(filePath + fileName);
 				
 				if (fileToReceive.exists()) {
 					System.out.println("\n*** TFTP ERROR 06: File " + fileToReceive.getPath() + " already exists...Overwrite not allowed...");
@@ -887,7 +890,7 @@ public class Client {
 			
 		} else if (type.equals(PacketType.WRITE)) {
 			// Check if file exists
-			File fileToSend = new File(FILE_PATH + fileName);
+			File fileToSend = new File(filePath + fileName);
 			
 			if (!fileToSend.exists()) {
 				System.out.println("\n*** TFTP ERROR 01: File " + fileToSend.getPath() + " not found...");
@@ -936,12 +939,7 @@ public class Client {
 		
 		
 
-	    try {
-	        sendPacket = new DatagramPacket(msg, msg.length, InetAddress.getLocalHost(), (this.mode == Mode.TEST ? 68 : 69));
-	    } catch (UnknownHostException e) {
-	        e.printStackTrace();
-	        System.exit(1);
-	    }
+	    sendPacket = new DatagramPacket(msg, msg.length, serverAddress, (this.mode == Mode.TEST ? 68 : 69));
 	    
 		System.out.println("\nSending " + type.name() + " request packet...");
 		
@@ -1026,7 +1024,7 @@ public class Client {
 	
 	public static void main(String args[]) {
 		
-		Client newClient = new Client(DEFAULT_MODE);
+		Client newClient = new Client();
 		
 		//Select mode (NORMAL/TEST)
 		while(true) {
@@ -1053,20 +1051,17 @@ public class Client {
 		
 		//Select file path
 		while(true) {
-			String filePath = "";
-			
+
 			System.out.println("------------------------------------------------------");
 			System.out.println("File path selection: \n");
 			System.out.println("Enter the name of the file path for the Client to use (if * is typed then src/client/files/ will be used):");
 
-			filePath = Keyboard.getString();
+			newClient.filePath = Keyboard.getString();
 			
-			if (filePath.trim().equals("*")) {
-				filePath = "src/client/files/";
+			if (newClient.filePath.trim().equals("*")) {
+				newClient.filePath = DEFAULT_FILE_PATH;
 			}
-			
-			FILE_PATH = filePath;
-			
+				
 			break;
 		}
 		

@@ -674,6 +674,10 @@ public class Request implements Runnable {
 	                	sendPacket(sendReceiveSocket, sendErrorPacket);
 	        		    
 	                	in.close();
+	                	
+	    	    		// Close the thread
+	    	    		System.out.println("\n*** IOException: Closing thread " + Thread.currentThread().getId() + "...\n");
+	    	    		
 	    				Thread.currentThread().interrupt();
 	    				return;
 		    	    }
@@ -684,11 +688,12 @@ public class Request implements Runnable {
 	        in.close();
     	} catch (FileNotFoundException e) {
     		System.out.println("No such file " + fileName);
-    		System.out.println("Exiting thread...");
+    		System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
     		Thread.currentThread().interrupt();
     		return;
     	} catch (IOException e) {
 	        e.printStackTrace();
+	        System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
 	        Thread.currentThread().interrupt();
 	        System.exit(1);
     	}
@@ -972,6 +977,7 @@ public class Request implements Runnable {
                 	sendPacket(sendReceiveSocket, sendErrorPacket);
         		    
                 	out.close();
+                	System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
     				Thread.currentThread().interrupt();
     				return;
 	    	    }
