@@ -30,6 +30,8 @@ public class Request implements Runnable {
 	
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;
 	
+	private RunningThreadCounter threadCounter;
+	
 	private DatagramSocket sendReceiveSocket;
 	private DatagramPacket requestPacket, sendPacket, receivePacket;
 	
@@ -38,7 +40,7 @@ public class Request implements Runnable {
 	private String fileName;
 	
 	
-	public Request(DatagramPacket requestPacket) {
+	public Request(RunningThreadCounter threadCounter, DatagramPacket requestPacket) {
 		this.requestPacket = requestPacket;
 		this.fileName = getFileName(requestPacket.getData());
 		
@@ -52,6 +54,11 @@ public class Request implements Runnable {
         }
 	    
 	    this.clientAddress = requestPacket.getAddress();
+	    
+	    this.threadCounter = threadCounter;
+	    
+	    // Increment the number of request threads running
+	    this.threadCounter.increment();
 	}
 	
 	public void printPacketInfo(DatagramPacket packet, Server.PacketAction action) {
@@ -999,10 +1006,6 @@ public class Request implements Runnable {
 	@Override
 	public void run() {
 		
-		if (Thread.currentThread().isInterrupted()) {
-			return;
-		}
-
 	    // Process the received datagram.
 	    printPacketInfo(requestPacket, PacketAction.RECEIVE);
 	    
@@ -1019,7 +1022,7 @@ public class Request implements Runnable {
 				    
 				} else {
 					Thread.currentThread().interrupt();
-					return;
+					//return;
 				}
 	    } catch (IllegalTftpOperationException invalidPacketException) {
 	    	System.out.println("IllegalTftpOperationException Thrown: " + invalidPacketException.getMessage());
@@ -1037,8 +1040,14 @@ public class Request implements Runnable {
 		    // Close the thread
     	    System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
 	    	Thread.currentThread().interrupt();
-	    	return;
+	    	//return;
 	    }
+	    
+	    
+		if (Thread.currentThread().isInterrupted()) {
+			threadCounter.decrement();
+			return;
+		}
 		
 		
 	}

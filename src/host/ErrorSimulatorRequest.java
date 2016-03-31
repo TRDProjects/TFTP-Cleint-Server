@@ -227,7 +227,7 @@ public class ErrorSimulatorRequest implements Runnable {
 	 	}
 		  
 	 	packet.setData(newData);
- }
+  }
 
   public void simulateErrorAndSendPacket(DatagramPacket packet, int packetNumber) {
 	boolean sendThePacket = true;

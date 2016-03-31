@@ -24,7 +24,7 @@ import util.Keyboard;
 
 public class Client {
 	
-	public static final Mode DEFAULT_MODE = Mode.TEST;
+	public static final Mode DEFAULT_MODE = Mode.NORMAL;
 	
 	public static final String FILE_PATH = "src/client/files/";
 	public static final int PACKET_RETRANSMISSION_TIMEOUT = 1000;

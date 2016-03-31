@@ -63,11 +63,14 @@ public class Server implements Runnable {
 		OCTET;
 	}
 	
-	volatile boolean running = true;
+	private boolean stopRequested = false;
 	
 	
 	private DatagramPacket receivePacket;
 	private DatagramSocket receiveSocket;
+	
+	private RunningThreadCounter threadCounter;
+	
 	
 	public Server() {
 		try {
@@ -76,7 +79,11 @@ public class Server implements Runnable {
             se.printStackTrace();
             System.exit(1);
 		}
+		
+		threadCounter = new RunningThreadCounter();
+		
 	}
+	
 	
 	public void printPacketInfo(DatagramPacket packet, PacketAction action) {
 		System.out.println("\n");
@@ -94,6 +101,12 @@ public class Server implements Runnable {
 	
 	
 	public void receiveAndProcessRequest() {
+		
+		if (stopRequested) {
+			shutDown();
+			return;
+		}
+		
         byte dataFromHost[] = new byte[517];
 		receivePacket = new DatagramPacket(dataFromHost, dataFromHost.length);
 	    System.out.println("Server: waiting for Packet.\n");
@@ -115,13 +128,22 @@ public class Server implements Runnable {
 	        
 	    }
 	    
+		if (stopRequested) {
+			shutDown();
+			return;
+		}
+
 	    
-	    Thread requestThread = new Thread(new Request(receivePacket), 
+	    
+	    Thread requestThread = new Thread(new Request(threadCounter, receivePacket), 
 	    		"Server Request Thread (For Host " + receivePacket.getAddress() + ")");
 	    
 	    System.out.println("\n\n >>> Server: starting new request thread with ID " + requestThread.getId() + "\n\n");
 	    
+	    
+	    
 	    requestThread.start();
+	    
 		
 	}
 
@@ -134,6 +156,16 @@ public class Server implements Runnable {
 			}
 			receiveAndProcessRequest();
 		}
+	}
+	
+	public void shutDown() {
+		do {
+			if (threadCounter.getNumberOfRunningThreads() == 0) {
+				receiveSocket.close();
+				Thread.currentThread().interrupt();
+				break;
+			}
+		} while (!Thread.currentThread().isInterrupted());
 	}
 	
 	
@@ -149,16 +181,20 @@ public class Server implements Runnable {
     	
     	while (true) {
         	if (Keyboard.getCharacter() == 'q') {
+        		System.out.println("\n*** Sending the shutdown signal ***\n");
+        		newServer.stopRequested = true;
+        	}
+   
+        	if (newServer.stopRequested) {
+        		newServer.shutDown();
         		break;
         	}
     	}
     	
-    	newServer.running = false;
-    	newServer.receiveSocket.close();
-    	serverThread.interrupt();
-    	
-    	System.out.println("Exiting...");
+    	System.out.println("\n*** Exiting ***\n");
     	System.exit(1);
+    	
+    	
     	
     	
     }
