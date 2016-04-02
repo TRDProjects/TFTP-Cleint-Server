@@ -1051,7 +1051,8 @@ public class Client {
 		
 		//Select file path
 		while(true) {
-
+			
+			
 			System.out.println("------------------------------------------------------");
 			System.out.println("File path selection: \n");
 			System.out.println("Enter the name of the file path for the Client to use (if * is typed then src/client/files/ will be used):");
@@ -1061,8 +1062,13 @@ public class Client {
 			if (newClient.filePath.trim().equals("*")) {
 				newClient.filePath = DEFAULT_FILE_PATH;
 			}
-				
-			break;
+			
+			//Check that file exists/is a valid file path
+			if (new File(newClient.filePath).isDirectory()) {
+				break;
+			} else {
+				System.out.println("File path does not exist or is not a directory, try again.");
+			}
 		}
 		
 		if (newClient.mode == Mode.NORMAL) {

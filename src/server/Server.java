@@ -6,6 +6,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.util.Arrays;
+import java.io.File;
 
 import util.Keyboard;
 
@@ -188,8 +189,14 @@ public class Server implements Runnable {
 			if (newServer.filePath.trim().equals("*")) {
 				newServer.filePath = DEFAULT_FILE_PATH;
 			}
-				
-			break;
+			
+			//Check that file exists/is a valid file path
+			if (new File(newServer.filePath).isDirectory()){
+				break;
+			} else {
+				System.out.println("File path does not exist or is not a directory, try again.");
+			}
+			
 		}
     	
         Thread serverThread = new Thread(newServer, "Server Main Thread");
