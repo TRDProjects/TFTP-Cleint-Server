@@ -190,7 +190,7 @@ public class Server implements Runnable {
 				newServer.filePath = DEFAULT_FILE_PATH;
 			}
 			
-			//Check that file exists/is a valid file path
+			//Check that file path exists/is a valid directory
 			if (new File(newServer.filePath).isDirectory()){
 				break;
 			} else {

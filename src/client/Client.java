@@ -1063,7 +1063,7 @@ public class Client {
 				newClient.filePath = DEFAULT_FILE_PATH;
 			}
 			
-			//Check that file exists/is a valid file path
+			//Check that file path exists/is a valid directory
 			if (new File(newClient.filePath).isDirectory()) {
 				break;
 			} else {
