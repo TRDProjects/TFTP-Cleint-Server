@@ -640,8 +640,7 @@ public class Client {
     		    	    }
     		    	    
     	           } while (receivePacket.getPort() != connectionPort || receivedDuplicateAck);
-
-    	    	    
+    
     	        }
     	    	
     	    } catch (FileNotFoundException fileNotFoundExceptionMidTransfer) {
@@ -677,7 +676,7 @@ public class Client {
     	    }
 	 
 	        
-		    System.out.println("\n Client (" + Thread.currentThread() + "): Finished sending file");
+		    System.out.println("\n *** Client: Finished sending file " + this.filePath + fileName);
 	        
 	        in.close();
 	        
@@ -776,7 +775,28 @@ public class Client {
      		    		        return;
     		    		    }
     		    		    
+    		    		    // Check if the file doesn't exist anymore
+    		    		    if (!file.exists()) {
+      		    		       System.out.println("\n*** File does not exist: " + file);
 
+  	    		   		    	// send error to server
+  	    		       	    	System.out.println("Sending error packet...");
+  	    		       	    	
+  	    		       	    	// Form the error packet
+  	    		               	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+  	    		               			receivePacket.getPort(),
+  	    		               			ErrorType.FILE_NOT_FOUND, 
+  	    		               			"File not found on client");
+  	    		               	
+  	    		               	// Send the error packet
+  	    		               	sendPacket(sendReceiveSocket, sendErrorPacket);
+  	    		       		    
+  	    		   				System.out.println("\n*** Ending session...***");
+  	    		   				
+      		    		        return;
+    		    		    }
+
+    		    		    // Check if we can't write to the file
     		    		    if(!file.canWrite()) {
      		    		       System.out.println("\n*** Access violation: Unable to access file " + file);
 
@@ -797,13 +817,12 @@ public class Client {
      		    		        return;
      		    		    }
 						    
+    		    		    // Write to the file
     					    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
 
     					    
-    					    
     		    			// Construct an ACK packet
-    		    		   
-    		    		    
+
     		    		    try {
     		    		    	sendPacket = formACKPacket(receivePacket.getAddress(), receivePacket.getPort(), blockNumber);
     		    		    } catch (UnknownHostException e) {
@@ -928,29 +947,38 @@ public class Client {
     	    } while(dataLength == 512 || notDataPacket || receivePacket.getPort() != connectionPort);
     	    
     	    
-    	    
+    	    // Close the file
     	    out.close();
     	    
     	} catch (FileNotFoundException fileNotFoundException) {
+	    	DatagramPacket sendErrorPacket;
+	    	
     		if (fileNotFoundException.getMessage().contains("Access is denied")) {
-	    		System.out.println("\n*** Access violation: " + fileNotFoundException.getMessage());
+	    		System.out.println("*** Access violation: cannot read file " + this.filePath + fileName);
 	    		
-		    	// send error to server
-    	    	System.out.println("Sending error packet...");
-    	    	
-    	    	// Form the error packet
-            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
-            			receivePacket.getPort(), 
-            			ErrorType.ACCESS_VIOLATION, 
-            			"Could not write file on the client");
-            	
-            	// Send the error packet
-            	sendPacket(sendReceiveSocket, sendErrorPacket);
-    		    
-				System.out.println("\n*** Ending session...***");
+	    		// Form the error packet
+	    		sendErrorPacket = formErrorPacket(receivePacket.getAddress(),
+	    				receivePacket.getPort(),
+	    				ErrorType.ACCESS_VIOLATION,
+	    				"Unable to access file on the client");
+    		} else {
+	    		System.out.println("*** File not found: " + this.filePath + fileName);
 	    		
-	    		return;
+	    		// Form the error packet
+	    		sendErrorPacket = formErrorPacket(receivePacket.getAddress(),
+	    				receivePacket.getPort(),
+	    				ErrorType.FILE_NOT_FOUND,
+	    				"File not found on client");
     		}
+    		
+    		System.out.println("*** Sending error packet...");
+           	
+           	// Send the error packet
+           	sendPacket(sendReceiveSocket, sendErrorPacket);
+   		    
+			System.out.println("\n*** Ending session...***");
+   				
+		    return;
     	    
     	} catch (SecurityException securityException) {
     		System.out.println("*** TFTP ERROR 02: Access violation");
@@ -965,7 +993,7 @@ public class Client {
 	    	
 
 
-	    System.out.println("\n Client (" + Thread.currentThread() + "): Finished receiving file");
+	    System.out.println("\n *** Client: Finished receiving file " + this.filePath + fileName);
 	    
 	    
 	}

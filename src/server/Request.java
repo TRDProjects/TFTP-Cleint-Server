@@ -482,21 +482,21 @@ public class Request implements Runnable {
 	        	DatagramPacket sendErrorPacket;
 	        	
 	    		if (fileNotFoundException.getMessage().contains("Access is denied")) {
-		    		System.out.println("*** Access violation: " + fileNotFoundException.getMessage());
+		    		System.out.println("*** Access violation: Unable to access file " + this.filePath + fileName);
 		    		
 		    		// Form the error packet
 		    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
 		    				requestPacket.getPort(),
 		    				ErrorType.ACCESS_VIOLATION,
-		    				fileNotFoundException.getMessage());
+		    				"Unable to read file " + fileName);
 	    		} else {
-		    		System.out.println("*** File not found: " + fileNotFoundException.getMessage());
+		    		System.out.println("*** File not found: " + this.filePath + fileName);
 		    		
 		    		// Form the error packet
 		    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
 			    				requestPacket.getPort(),
 			    				ErrorType.FILE_NOT_FOUND,
-			    				fileNotFoundException.getMessage());
+			    				"File not found: " + fileName);
 	    		}
 	    		
 	    		System.out.println("*** Sending error packet...");
@@ -508,6 +508,7 @@ public class Request implements Runnable {
 	    		System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
 	    		
 	    		Thread.currentThread().interrupt();
+	    		
 	        	return;
 	        	
 	        } catch (SecurityException securityException) {
@@ -531,6 +532,7 @@ public class Request implements Runnable {
 	        	
 	        }
         	
+
 	        // Read the file in 512 byte chunks
 	        while ((n = in.read(dataFromFile)) != -1 || sendLastZeroByteDataPacket) {
 	        	
@@ -688,11 +690,40 @@ public class Request implements Runnable {
 	        }
 	        
 	        in.close();
-    	} catch (FileNotFoundException e) {
-    		System.out.println("No such file " + fileName);
+	        
+    	} catch (FileNotFoundException fileNotFoundException) {
+        	DatagramPacket sendErrorPacket;
+        	
+    		if (fileNotFoundException.getMessage().contains("Access is denied")) {
+	    		System.out.println("*** Access violation: " + fileNotFoundException.getMessage());
+	    		
+	    		// Form the error packet
+	    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
+	    				requestPacket.getPort(),
+	    				ErrorType.ACCESS_VIOLATION,
+	    				"Unable to read file " + fileName);
+    		} else {
+	    		System.out.println("*** File not found: " + fileNotFoundException.getMessage());
+	    		
+	    		// Form the error packet
+	    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
+		    				requestPacket.getPort(),
+		    				ErrorType.FILE_NOT_FOUND,
+		    				"File not found: " + fileName);
+    		}
+    		
+    		System.out.println("*** Sending error packet...");
+    		
+    		// Send the error packet
+    		sendPacket(sendReceiveSocket, sendErrorPacket);
+    		
+    		// Close the thread
     		System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+    		
     		Thread.currentThread().interrupt();
-    		return;
+    		
+        	return;
+        	
     	} catch (IOException e) {
 	        e.printStackTrace();
 	        System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
@@ -746,27 +777,27 @@ public class Request implements Runnable {
 	    	} catch (FileNotFoundException fileNotFoundException) {
 	    		//Since this is creating or overwriting a file, this exception is only thrown if it cannot be created for some reason, or if the path is that of a directory rather than a file
 	    		
-	    		DatagramPacket sendErrorPacket;
-	    		
+	        	DatagramPacket sendErrorPacket;
+	        	
 	    		if (fileNotFoundException.getMessage().contains("Access is denied")) {
-		    		System.out.println("*** Access violation: " + fileNotFoundException.getMessage());
+		    		System.out.println("*** Access violation: unable to access file " + this.filePath + fileName);
 		    		
 		    		// Form the error packet
 		    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
 		    				requestPacket.getPort(),
 		    				ErrorType.ACCESS_VIOLATION,
-		    				fileNotFoundException.getMessage());
+		    				"Unable to read file " + fileName);
 	    		} else {
-		    		System.out.println("*** File not found: " + fileNotFoundException.getMessage());
+		    		System.out.println("*** File not found: " + this.filePath + fileName);
 		    		
 		    		// Form the error packet
 		    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
 			    				requestPacket.getPort(),
 			    				ErrorType.FILE_NOT_FOUND,
-			    				fileNotFoundException.getMessage());
+			    				"File not found: " + fileName);
 	    		}
 	    		
-	    		System.out.println("Sending error packet...");
+	    		System.out.println("*** Sending error packet...");
 	    		
 	    		// Send the error packet
 	    		sendPacket(sendReceiveSocket, sendErrorPacket);
@@ -775,7 +806,8 @@ public class Request implements Runnable {
 	    		System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
 	    		
 	    		Thread.currentThread().interrupt();
-	    		return;
+	    		
+	        	return;
 	    		
 	    	} catch (SecurityException securityException) {
 	    		System.out.println("SecurityException Thrown: " + securityException.getMessage());
@@ -862,29 +894,64 @@ public class Request implements Runnable {
 						    // Update the length of the file data
 						    dataLength = getFileDataFromDataPacket(receivePacket).length;
 						    
-						    if (file.getUsableSpace() < dataLength) {
-						    	System.out.println("Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
-				    	    	System.out.println("Sending error packet...");
-				    	    	
-				    	    	// Form the error packet
-				            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
-				            			receivePacket.getPort(), 
-				            			ErrorType.DISK_FULL, 
-				            			"(Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.)");
-				            	
-					    	    // Send the error packet
-					    	    sendPacket(sendReceiveSocket, sendErrorPacket);
-				    	    	
-				    		    // Close the thread
-					    	    System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
-				    	    	
-					    	    out.close();
-					    	    Thread.currentThread().interrupt();
-				    	    	return;
+						    try {
+							    if (file.getUsableSpace() < dataLength) {
+							    	System.out.println("Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
+					    	    	System.out.println("Sending error packet...");
+					    	    	
+					    	    	// Form the error packet
+					            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+					            			receivePacket.getPort(), 
+					            			ErrorType.DISK_FULL, 
+					            			"(Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.)");
+					            	
+						    	    // Send the error packet
+						    	    sendPacket(sendReceiveSocket, sendErrorPacket);
+					    	    	
+					    		    // Close the thread
+						    	    System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+					    	    	
+						    	    out.close();
+						    	    Thread.currentThread().interrupt();
+					    	    	return;
+							    }
+							    
+							    // Write to file
+							    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
+							    
+						    } catch (FileNotFoundException fileNotFoundExceptionMidTransfer) {
+					        	DatagramPacket sendErrorPacket;
+					        	
+					    		if (fileNotFoundExceptionMidTransfer.getMessage().contains("Access is denied")) {
+						    		System.out.println("*** Access violation: unable to access file " + file);
+						    		
+						    		// Form the error packet
+						    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
+						    				requestPacket.getPort(),
+						    				ErrorType.ACCESS_VIOLATION,
+						    				"Unable to read file " + fileName);
+					    		} else {
+						    		System.out.println("*** File not found: " + file);
+						    		
+						    		// Form the error packet
+						    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
+							    				requestPacket.getPort(),
+							    				ErrorType.FILE_NOT_FOUND,
+							    				"File not found: " + fileName);
+					    		}
+					    		
+					    		System.out.println("*** Sending error packet...");
+					    		
+					    		// Send the error packet
+					    		sendPacket(sendReceiveSocket, sendErrorPacket);
+					    		
+					    		// Close the thread
+					    		System.out.println("\n*** Closing thread " + Thread.currentThread().getId() + "...\n");
+					    		
+					    		Thread.currentThread().interrupt();
+					    		
+					        	return;
 						    }
-						    
-						    // Write to file
-						    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
 
 						    
 							// Construct an ACK datagram packet
