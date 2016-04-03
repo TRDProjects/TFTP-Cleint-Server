@@ -88,7 +88,6 @@ public class ErrorSimulator {
 				try {
 					serverAddress = InetAddress.getLocalHost();
 				} catch (UnknownHostException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				break;

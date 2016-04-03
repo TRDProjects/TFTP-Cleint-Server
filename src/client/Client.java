@@ -504,149 +504,215 @@ public class Client {
 	        
     	    
 	        // Read the file in 512 byte chunks
-	        while ((n = in.read(dataFromFile)) != -1) {
-	        	     	
-	        	DatagramPacket sendDataPacket = formDataPacket(packet.getAddress(), packet.getPort(), 
-	        			dataFromFile, n, 
-	        			blockNumber);
-	        
-	        	
-	        	removeTrailingZeroBytesFromDataPacket(sendDataPacket);
-	        	
-            	// Send the DATA packet
-            	sendPacket(sendReceiveSocket, sendDataPacket);
+    	    try {
+    	    	while ((n = in.read(dataFromFile)) != -1) {
+        	     	
+    	        	DatagramPacket sendDataPacket = formDataPacket(packet.getAddress(), packet.getPort(), 
+    	        			dataFromFile, n, 
+    	        			blockNumber);
+    	        
+    	        	
+    	        	removeTrailingZeroBytesFromDataPacket(sendDataPacket);
+    	        	
+                	// Send the DATA packet
+                	sendPacket(sendReceiveSocket, sendDataPacket);
 
-	    
-	    	    // Wait to receive an ACK 	    
+    	    
+    	    	    // Wait to receive an ACK 	    
 
-	            do {
-	        	   
-	            	try {
-	 		    	   // Attempt to receive a packet
-	 		    	   receivePacket = receivePacket(sendReceiveSocket, 517);
-	 		    	   
-	            	} catch (SocketTimeoutException firstTimeoutException) {
-	            		// Resend the DATA packet
-	            		System.out.println("\n*** Socket Timout...Resending DATA packet ***");
-	            		sendPacket(sendReceiveSocket, sendDataPacket);
-	            		
-	            		try {
-		            		// Attempt to receive a packet for the second time
-		            		receivePacket = receivePacket(sendReceiveSocket, 517);
-		            		
-	            		} catch (SocketTimeoutException secondTimoutException) {
-	            			System.out.println("\n ****** Server Unreachable...Ending This Session ******");
-	            			in.close();
-	            			return;
-	            		}
-	            	}
-		    	    		    
-		    	    
-		    	    try {
-		    	    	PacketType packetType = getPacketType(receivePacket);
-		    	    	
-		    	    	if (packetType.equals(PacketType.ACK)) {
-		    	    	    // Validate the ACK packet
-		    	    	    try {
-		    	    	    	validateAckPacket(receivePacket, blockNumber, connectionPort);
-		    	    	    	
-			                    // ACK packet has been validated so we increment the block number now
-			    	    	    blockNumber = incrementBlockNumber(blockNumber);
-			    	    	    
-			    	    	    receivedDuplicateAck = false;
-		    	    	    	
-		    	    	    } catch (IllegalTftpOperationException illegalOperationException) {
-		    	    	    	System.out.println("IllegalTftpOperationException: " + illegalOperationException.getMessage());
-		    	    	    	System.out.println("Sending error packet...");
-		    	    	    	
-		    	    	    	// Form the error packet
-		    	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
-		    	            			receivePacket.getPort(), 
-		    	            			ErrorType.ILLEGAL_TFTP_OPERATION, 
-		    	            			illegalOperationException.getMessage());
-		    	            	
-		    	            	// Send the error packet
-		    	            	sendPacket(sendReceiveSocket, sendErrorPacket);
-		    	    		    
-		    					System.out.println("\n*** Ending session...***");
-		    					
-		    	            	in.close();
-		    	            	
-		    					return;
-		    	    	    	
-		    	    	    	
-		    	    	    } catch(UnknownTransferIdException unknownTransferIdException) {
-		    	    	    	System.out.println("\n*** UnknownTransferId: " + unknownTransferIdException.getMessage());
-		    	    	    	System.out.println("*** Sending error packet...");
-		    	    	    	
-		    	    	    	// Form the error packet
-		    	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
-		    	            			receivePacket.getPort(), 
-		    	            			ErrorType.UNKNOWN_TRANSFER_ID, 
-		    	            			unknownTransferIdException.getMessage());
-		    	            	
-		    	            	// Send the error packet
-		    	            	sendPacket(sendReceiveSocket, sendErrorPacket);
-		    	    	    	
-		    	    	    } catch (PacketAlreadyReceivedException alreadyReceivedException) {
-		    	    	    	// Ignore this packet
-		    	    	    	System.out.println("\n*** The received ACK packet was already received beforehand...Ignoring it... *** \n");
-		    	    	    	receivedDuplicateAck = true;
-		    	    	        continue;
-		    	    	    }
-		    	    	    
-		    	    	        
-		    	    	    
-		    	    	} else if (packetType.equals(PacketType.ERROR)) {
-				    		ErrorType errorType = getErrorType(receivePacket);
-				    		
-				    		if (errorType != null) {
-				    			if (errorType.equals(ErrorType.ILLEGAL_TFTP_OPERATION)) {
-				    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error packet...Ending session...***");
-				    				
-				                	in.close();
-				    				return;
-				    				
-				    			} else if (errorType.equals(ErrorType.DISK_FULL)) {
-				    				System.out.println("\n*** Received DISK_FULL error packet...Ending session...***");
-				    				
-				                	in.close();
-				    				return;
-				    			}
-				    		}
-		    	    	}
-		    	    	
-		    	    } catch (InvalidPacketTypeException e) {
-				    	System.out.println("\n*** Received Packet with invalid ACK opCode ***");
-				    	
-				    	// send error to server for invalid ACK opcode
-		    	    	System.out.println("Sending error packet...");
-		    	    	
-		    	    	// Form the error packet
-		            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
-		            			receivePacket.getPort(), 
-		            			ErrorType.ILLEGAL_TFTP_OPERATION, 
-		            			"Invalid opCode for expected ACK packet");
-		            	
-		            	// Send the error packet
-		            	sendPacket(sendReceiveSocket, sendErrorPacket);
-		    		    
-						System.out.println("\n*** Ending session...***");
-						
-		            	in.close();
-		            	
-						return;
-		    	    }
-		    	    
-	           } while (receivePacket.getPort() != connectionPort || receivedDuplicateAck);
+    	            do {
+    	        	   
+    	            	try {
+    	 		    	   // Attempt to receive a packet
+    	 		    	   receivePacket = receivePacket(sendReceiveSocket, 517);
+    	 		    	   
+    	            	} catch (SocketTimeoutException firstTimeoutException) {
+    	            		// Resend the DATA packet
+    	            		System.out.println("\n*** Socket Timout...Resending DATA packet ***");
+    	            		sendPacket(sendReceiveSocket, sendDataPacket);
+    	            		
+    	            		try {
+    		            		// Attempt to receive a packet for the second time
+    		            		receivePacket = receivePacket(sendReceiveSocket, 517);
+    		            		
+    	            		} catch (SocketTimeoutException secondTimoutException) {
+    	            			System.out.println("\n ****** Server Unreachable...Ending This Session ******");
+    	            			in.close();
+    	            			return;
+    	            		}
+    	            	}
+    		    	    		    
+    		    	    
+    		    	    try {
+    		    	    	PacketType packetType = getPacketType(receivePacket);
+    		    	    	
+    		    	    	if (packetType.equals(PacketType.ACK)) {
+    		    	    	    // Validate the ACK packet
+    		    	    	    try {
+    		    	    	    	validateAckPacket(receivePacket, blockNumber, connectionPort);
+    		    	    	    	
+    			                    // ACK packet has been validated so we increment the block number now
+    			    	    	    blockNumber = incrementBlockNumber(blockNumber);
+    			    	    	    
+    			    	    	    receivedDuplicateAck = false;
+    		    	    	    	
+    		    	    	    } catch (IllegalTftpOperationException illegalOperationException) {
+    		    	    	    	System.out.println("IllegalTftpOperationException: " + illegalOperationException.getMessage());
+    		    	    	    	System.out.println("Sending error packet...");
+    		    	    	    	
+    		    	    	    	// Form the error packet
+    		    	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+    		    	            			receivePacket.getPort(), 
+    		    	            			ErrorType.ILLEGAL_TFTP_OPERATION, 
+    		    	            			illegalOperationException.getMessage());
+    		    	            	
+    		    	            	// Send the error packet
+    		    	            	sendPacket(sendReceiveSocket, sendErrorPacket);
+    		    	    		    
+    		    					System.out.println("\n*** Ending session...***");
+    		    					
+    		    	            	in.close();
+    		    	            	
+    		    					return;
+    		    	    	    	
+    		    	    	    	
+    		    	    	    } catch(UnknownTransferIdException unknownTransferIdException) {
+    		    	    	    	System.out.println("\n*** UnknownTransferId: " + unknownTransferIdException.getMessage());
+    		    	    	    	System.out.println("*** Sending error packet...");
+    		    	    	    	
+    		    	    	    	// Form the error packet
+    		    	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+    		    	            			receivePacket.getPort(), 
+    		    	            			ErrorType.UNKNOWN_TRANSFER_ID, 
+    		    	            			unknownTransferIdException.getMessage());
+    		    	            	
+    		    	            	// Send the error packet
+    		    	            	sendPacket(sendReceiveSocket, sendErrorPacket);
+    		    	    	    	
+    		    	    	    } catch (PacketAlreadyReceivedException alreadyReceivedException) {
+    		    	    	    	// Ignore this packet
+    		    	    	    	System.out.println("\n*** The received ACK packet was already received beforehand...Ignoring it... *** \n");
+    		    	    	    	receivedDuplicateAck = true;
+    		    	    	        continue;
+    		    	    	    }
+    		    	    	    
+    		    	    	        
+    		    	    	    
+    		    	    	} else if (packetType.equals(PacketType.ERROR)) {
+    				    		ErrorType errorType = getErrorType(receivePacket);
+    				    		
+    				    		if (errorType != null) {
+    				    			if (errorType.equals(ErrorType.ILLEGAL_TFTP_OPERATION)) {
+    				    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error packet...Ending session...***");
+    				    				
+    				                	in.close();
+    				    				return;
+    				    				
+    				    			} else if (errorType.equals(ErrorType.DISK_FULL)) {
+    				    				System.out.println("\n*** Received DISK_FULL error packet...Ending session...***");
+    				    				
+    				                	in.close();
+    				    				return;
+    				    			}
+    				    		}
+    		    	    	}
+    		    	    	
+    		    	    } catch (InvalidPacketTypeException e) {
+    				    	System.out.println("\n*** Received Packet with invalid ACK opCode ***");
+    				    	
+    				    	// send error to server for invalid ACK opcode
+    		    	    	System.out.println("Sending error packet...");
+    		    	    	
+    		    	    	// Form the error packet
+    		            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+    		            			receivePacket.getPort(), 
+    		            			ErrorType.ILLEGAL_TFTP_OPERATION, 
+    		            			"Invalid opCode for expected ACK packet");
+    		            	
+    		            	// Send the error packet
+    		            	sendPacket(sendReceiveSocket, sendErrorPacket);
+    		    		    
+    						System.out.println("\n*** Ending session...***");
+    						
+    		            	in.close();
+    		            	
+    						return;
+    		    	    }
+    		    	    
+    	           } while (receivePacket.getPort() != connectionPort || receivedDuplicateAck);
 
-	    	    
-	        	
-	        }
+    	    	    
+    	        }
+    	    	
+    	    } catch (FileNotFoundException fileNotFoundExceptionMidTransfer) {
+    	    	
+    	    	DatagramPacket sendErrorPacket;
+    	    	
+	    		if (fileNotFoundExceptionMidTransfer.getMessage().contains("Access is denied")) {
+		    		System.out.println("*** Access violation: cannot read file " + file);
+		    		
+		    		// Form the error packet
+		    		sendErrorPacket = formErrorPacket(receivePacket.getAddress(),
+		    				receivePacket.getPort(),
+		    				ErrorType.ACCESS_VIOLATION,
+		    				"Unable to access file on the client");
+	    		} else {
+		    		System.out.println("*** File not found: " + file);
+		    		
+		    		// Form the error packet
+		    		sendErrorPacket = formErrorPacket(receivePacket.getAddress(),
+		    				receivePacket.getPort(),
+		    				ErrorType.FILE_NOT_FOUND,
+		    				"File not found on client");
+	    		}
+	    		
+	    		System.out.println("*** Sending error packet...");
+               	
+               	// Send the error packet
+               	sendPacket(sendReceiveSocket, sendErrorPacket);
+       		    
+   				System.out.println("\n*** Ending session...***");
+	   				
+  		        return;
+    	    }
+	 
 	        
 		    System.out.println("\n Client (" + Thread.currentThread() + "): Finished sending file");
 	        
 	        in.close();
+	        
+	        return;
+	        
+    	} catch (FileNotFoundException fileNotFoundException) {
+	    	DatagramPacket sendErrorPacket;
+	    	
+    		if (fileNotFoundException.getMessage().contains("Access is denied")) {
+	    		System.out.println("*** Access violation: cannot read file " + this.filePath + fileName);
+	    		
+	    		// Form the error packet
+	    		sendErrorPacket = formErrorPacket(receivePacket.getAddress(),
+	    				receivePacket.getPort(),
+	    				ErrorType.ACCESS_VIOLATION,
+	    				"Unable to access file on the client");
+    		} else {
+	    		System.out.println("*** File not found: " + this.filePath + fileName);
+	    		
+	    		// Form the error packet
+	    		sendErrorPacket = formErrorPacket(receivePacket.getAddress(),
+	    				receivePacket.getPort(),
+	    				ErrorType.FILE_NOT_FOUND,
+	    				"File not found on client");
+    		}
+    		
+    		System.out.println("*** Sending error packet...");
+           	
+           	// Send the error packet
+           	sendPacket(sendReceiveSocket, sendErrorPacket);
+   		    
+			System.out.println("\n*** Ending session...***");
+   				
+		    return;
+		    
     	} catch (IOException e) {
 	        e.printStackTrace();
 	        System.exit(1);
@@ -702,39 +768,41 @@ public class Client {
         		            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
         		            			receivePacket.getPort(), 
         		            			ErrorType.DISK_FULL, 
-        		            			"(Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.)");
+        		            			"Disk out of space");
         		            	
         		            	// Send the error packet
         		            	sendPacket(sendReceiveSocket, sendErrorPacket);
         		            	
      		    		        return;
     		    		    }
+    		    		    
+
+    		    		    if(!file.canWrite()) {
+     		    		       System.out.println("\n*** Access violation: Unable to access file " + file);
+
+ 	    		   		    	// send error to server
+ 	    		       	    	System.out.println("Sending error packet...");
+ 	    		       	    	
+ 	    		       	    	// Form the error packet
+ 	    		               	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+ 	    		               			receivePacket.getPort(),
+ 	    		               			ErrorType.ACCESS_VIOLATION, 
+ 	    		               			"Could not write file on the client");
+ 	    		               	
+ 	    		               	// Send the error packet
+ 	    		               	sendPacket(sendReceiveSocket, sendErrorPacket);
+ 	    		       		    
+ 	    		   				System.out.println("\n*** Ending session...***");
+ 	    		   				
+     		    		        return;
+     		    		    }
 						    
     					    out.write(getFileDataFromDataPacket(receivePacket), 0, dataLength);
 
     					    
     					    
     		    			// Construct an ACK packet
-    		    		    
-    		    		    if(!file.canWrite()) {
-    		    		       System.out.println("\n*** Access violation: Unable to access file " + file);
-
-	    		   		    	// send error to server
-	    		       	    	System.out.println("Sending error packet...");
-	    		       	    	
-	    		       	    	// Form the error packet
-	    		               	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
-	    		               			receivePacket.getPort(),
-	    		               			ErrorType.ACCESS_VIOLATION, 
-	    		               			"Could not write file on the client");
-	    		               	
-	    		               	// Send the error packet
-	    		               	sendPacket(sendReceiveSocket, sendErrorPacket);
-	    		       		    
-	    		   				System.out.println("\n*** Ending session...***");
-	    		   				
-    		    		        return;
-    		    		    }
+    		    		   
     		    		    
     		    		    try {
     		    		    	sendPacket = formACKPacket(receivePacket.getAddress(), receivePacket.getPort(), blockNumber);

@@ -473,8 +473,7 @@ public class ErrorSimulatorRequest implements Runnable {
  		
  		
  	} catch (InvalidPacketTypeException e) {
-         e.printStackTrace();
-         //System.exit(1);
+ 		// Do nothing
  	}
  	
 
@@ -558,7 +557,7 @@ public class ErrorSimulatorRequest implements Runnable {
 	  int destinationPort;
 	  
 	  // Set the destination address and port
-	  if (receivePacket.getAddress().equals(clientAddress)) {
+	  if (receivePacket.getAddress().equals(clientAddress) && receivePacket.getPort() == clientPort) {
 		  destinationAddress = serverAddress;
 		  destinationPort = serverRequestThreadPort;
 		  
