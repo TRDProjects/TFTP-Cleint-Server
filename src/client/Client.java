@@ -599,22 +599,11 @@ public class Client {
     		    	    	        
     		    	    	    
     		    	    	} else if (packetType.equals(PacketType.ERROR)) {
-    				    		ErrorType errorType = getErrorType(receivePacket);
-    				    		
-    				    		if (errorType != null) {
-    				    			if (errorType.equals(ErrorType.ILLEGAL_TFTP_OPERATION)) {
-    				    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error packet...Ending session...***");
-    				    				
-    				                	in.close();
-    				    				return;
-    				    				
-    				    			} else if (errorType.equals(ErrorType.DISK_FULL)) {
-    				    				System.out.println("\n*** Received DISK_FULL error packet...Ending session...***");
-    				    				
-    				                	in.close();
-    				    				return;
-    				    			}
-    				    		}
+			    				System.out.println("\n*** Received error packet...Ending session...***");
+			    				
+			                	in.close();
+			    				return;
+
     		    	    	}
     		    	    	
     		    	    } catch (InvalidPacketTypeException e) {
@@ -774,6 +763,8 @@ public class Client {
         		            	// Send the error packet
         		            	sendPacket(sendReceiveSocket, sendErrorPacket);
         		            	
+        		            	out.close();
+        		            	
      		    		        return;
     		    		    }
     		    		    
@@ -795,6 +786,8 @@ public class Client {
   	    		       		    
   	    		   				System.out.println("\n*** Ending session...***");
   	    		   				
+  	    		   				out.close();
+  	    		   				
       		    		        return;
     		    		    }
 
@@ -815,6 +808,8 @@ public class Client {
  	    		               	sendPacket(sendReceiveSocket, sendErrorPacket);
  	    		       		    
  	    		   				System.out.println("\n*** Ending session...***");
+ 	    		   				
+ 	    		   			    out.close();
  	    		   				
      		    		        return;
      		    		    }
