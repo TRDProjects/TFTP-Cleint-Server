@@ -396,38 +396,6 @@ public class Client {
 	}
 	
 	
-	private ErrorType getErrorType(DatagramPacket packet) {
-		byte[] data = packet.getData();
-		
-		// Check if the packet is an error packet to begin with
-		if (data[0] == 0 && data[1] == PacketType.ERROR.getOpcode()) {
-			
-			
-			if (data[2] == 0 && data[3] == ErrorType.FILE_NOT_FOUND.getErrorCode()) {
-				return ErrorType.FILE_NOT_FOUND;
-				
-			} else if (data[2] == 0 && data[3] == ErrorType.ACCESS_VIOLATION.getErrorCode()) {
-				return ErrorType.ACCESS_VIOLATION;
-				
-			} else if (data[2] == 0 && data[3] == ErrorType.DISK_FULL.getErrorCode()) {
-				return ErrorType.DISK_FULL;
-				
-		    } else if (data[2] == 0 && data[3] == ErrorType.ILLEGAL_TFTP_OPERATION.getErrorCode()) {
-				return ErrorType.ILLEGAL_TFTP_OPERATION;
-				
-			} else if (data[2] == 0 && data[3] == ErrorType.UNKNOWN_TRANSFER_ID.getErrorCode()) {
-				return ErrorType.UNKNOWN_TRANSFER_ID;
-				
-			} else if (data[2] == 0 && data[3] == ErrorType.FILE_ALREADY_EXISTS.getErrorCode()) {
-				return ErrorType.FILE_ALREADY_EXISTS;
-			}
-			
-		}
-		
-		return null;
-	}
-	
-	
 	private short getBlockNumberAsShort(byte[] blockNumber) {
 		return ByteBuffer.wrap(blockNumber).getShort();
 	}
@@ -599,10 +567,11 @@ public class Client {
     		    	    	        
     		    	    	    
     		    	    	} else if (packetType.equals(PacketType.ERROR)) {
+    				    		
 			    				System.out.println("\n*** Received error packet...Ending session...***");
-			    				
-			                	in.close();
-			    				return;
+				    				
+				                in.close();
+				    			return;
 
     		    	    	}
     		    	    	
@@ -907,16 +876,10 @@ public class Client {
     		    	    }
     				    
     		    	} else if (packetType.equals(PacketType.ERROR)) {
-    		    		
-    		    		ErrorType errorType = getErrorType(receivePacket);
-    		    		
-    		    		if (errorType != null) {
-    		    			if (errorType.equals(ErrorType.ILLEGAL_TFTP_OPERATION)) {
-    		    				System.out.println("\n*** Received error packet...Ending session...***");
-    		    				out.close();
-    		    				return;
-    		    			}
-    		    		}
+
+	    				System.out.println("\n*** Received error packet...Ending session...***");
+	    				out.close();
+	    				return;
     		    	}
     		    	
     		    } catch (InvalidPacketTypeException e) {
