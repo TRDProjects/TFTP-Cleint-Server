@@ -6,6 +6,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -716,9 +717,23 @@ public class Client {
     		    			// Construct an ACK packet
     		    		    
     		    		    if(!file.canWrite()) {
-    		    		       System.out.println("*** TFTP ERROR 02 : Unable to access file " + file);
-    		    		       System.out.println("*** Ending session...");
-    		    		       return;
+    		    		       System.out.println("\n*** Access violation: Unable to access file " + file);
+
+	    		   		    	// send error to server
+	    		       	    	System.out.println("Sending error packet...");
+	    		       	    	
+	    		       	    	// Form the error packet
+	    		               	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+	    		               			receivePacket.getPort(),
+	    		               			ErrorType.ACCESS_VIOLATION, 
+	    		               			"Could not write file on the client");
+	    		               	
+	    		               	// Send the error packet
+	    		               	sendPacket(sendReceiveSocket, sendErrorPacket);
+	    		       		    
+	    		   				System.out.println("\n*** Ending session...***");
+	    		   				
+    		    		        return;
     		    		    }
     		    		    
     		    		    try {
@@ -847,6 +862,27 @@ public class Client {
     	    
     	    
     	    out.close();
+    	    
+    	} catch (FileNotFoundException fileNotFoundException) {
+    		if (fileNotFoundException.getMessage().contains("Access is denied")) {
+	    		System.out.println("\n*** Access violation: " + fileNotFoundException.getMessage());
+	    		
+		    	// send error to server
+    	    	System.out.println("Sending error packet...");
+    	    	
+    	    	// Form the error packet
+            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
+            			receivePacket.getPort(), 
+            			ErrorType.ACCESS_VIOLATION, 
+            			"Could not write file on the client");
+            	
+            	// Send the error packet
+            	sendPacket(sendReceiveSocket, sendErrorPacket);
+    		    
+				System.out.println("\n*** Ending session...***");
+	    		
+	    		return;
+    		}
     	    
     	} catch (SecurityException securityException) {
     		System.out.println("*** TFTP ERROR 02: Access violation");
@@ -1015,10 +1051,7 @@ public class Client {
 				return;
 	    	}
 	    }
-	   
-
-		
-		
+	   	
 	}
 	
 	
