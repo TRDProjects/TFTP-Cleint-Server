@@ -473,6 +473,8 @@ public class Client {
             	// Send the error packet
             	sendPacket(sendReceiveSocket, sendErrorPacket);
             	
+            	System.out.println("\n*** Ending session...***");
+            	
             	in.close();
             	
     	    	return;
@@ -993,7 +995,6 @@ public class Client {
             	sendPacket(sendReceiveSocket, sendErrorPacket);
     		    
 				System.out.println("\n*** Ending session...***");
-				//System.exit(1);
 				return;
     		    
 	    	} else if (type.equals(PacketType.WRITE)) {
@@ -1011,7 +1012,6 @@ public class Client {
             	sendPacket(sendReceiveSocket, sendErrorPacket);
     		    
 				System.out.println("\n*** Ending session...***");
-				//System.exit(1);
 				return;
 	    	}
 	    }
@@ -1085,7 +1085,6 @@ public class Client {
 					try {
 						newClient.serverAddress = InetAddress.getLocalHost();
 					} catch (UnknownHostException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 					break;
