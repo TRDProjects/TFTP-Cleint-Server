@@ -482,7 +482,7 @@ public class Request implements Runnable {
 	        	DatagramPacket sendErrorPacket;
 	        	
 	    		if (fileNotFoundException.getMessage().contains("Access is denied")) {
-		    		System.out.println("*** Access violation: Unable to access file " + this.filePath + fileName);
+		    		System.out.println("\n*** Access violation: Unable to access file " + this.filePath + fileName);
 		    		
 		    		// Form the error packet
 		    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
@@ -512,8 +512,8 @@ public class Request implements Runnable {
 	        	return;
 	        	
 	        } catch (SecurityException securityException) {
-	    		System.out.println("SecurityException Thrown: " + securityException.getMessage());
-	    		System.out.println("Sending error package...");
+	    		System.out.println("\n*** SecurityException Thrown: " + securityException.getMessage());
+	    		System.out.println("*** Sending error packet...");
 	    		
 	    		// Form the error packet
 	    		DatagramPacket sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
@@ -592,8 +592,8 @@ public class Request implements Runnable {
 			    	    	    
 		    	    	    	
 		    	    	    } catch (IllegalTftpOperationException illegalOperationException) {
-		    	    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
-		    	    	    	System.out.println("Sending error packet...");
+		    	    	    	System.out.println("\n*** IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
+		    	    	    	System.out.println("*** Sending error packet...");
 		    	    	    	
 		    	    	    	// Form the error packet
 		    	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
@@ -613,8 +613,8 @@ public class Request implements Runnable {
 		    	    	    	
 		    	    	    	
 		    	    	    } catch(UnknownTransferIdException unknownTransferIdException) {
-		    	    	    	System.out.println("UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
-		    	    	    	System.out.println("Sending error packet...");
+		    	    	    	System.out.println("\n*** UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
+		    	    	    	System.out.println("*** Sending error packet...");
 		    	    	    	
 		    	    	    	// Form the error packet
 		    	            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
@@ -695,7 +695,7 @@ public class Request implements Runnable {
         	DatagramPacket sendErrorPacket;
         	
     		if (fileNotFoundException.getMessage().contains("Access is denied")) {
-	    		System.out.println("*** Access violation: " + fileNotFoundException.getMessage());
+	    		System.out.println("\n*** Access violation: " + fileNotFoundException.getMessage());
 	    		
 	    		// Form the error packet
 	    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
@@ -780,7 +780,7 @@ public class Request implements Runnable {
 	        	DatagramPacket sendErrorPacket;
 	        	
 	    		if (fileNotFoundException.getMessage().contains("Access is denied")) {
-		    		System.out.println("*** Access violation: unable to access file " + this.filePath + fileName);
+		    		System.out.println("\n*** Access violation: unable to access file " + this.filePath + fileName);
 		    		
 		    		// Form the error packet
 		    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
@@ -788,7 +788,7 @@ public class Request implements Runnable {
 		    				ErrorType.ACCESS_VIOLATION,
 		    				"Unable to read file " + fileName);
 	    		} else {
-		    		System.out.println("*** File not found: " + this.filePath + fileName);
+		    		System.out.println("\n*** File not found: " + this.filePath + fileName);
 		    		
 		    		// Form the error packet
 		    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
@@ -832,8 +832,8 @@ public class Request implements Runnable {
 	    	
 	    	if (!Server.ALLOW_FILE_OVERWRITING) {
 	    		if (file.exists()) {
-		    		System.out.println("File already exists in server, file overwriting not allowed.");
-		    		System.out.println("Sending error package...");
+		    		System.out.println("\n*** File already exists in server, file overwriting not allowed.");
+		    		System.out.println("*** Sending error packet...");
 		    		
 		    		// Form the error packet
 		    		DatagramPacket sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
@@ -896,8 +896,8 @@ public class Request implements Runnable {
 						    
 						    try {
 							    if (file.getUsableSpace() < dataLength) {
-							    	System.out.println("Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
-					    	    	System.out.println("Sending error packet...");
+							    	System.out.println("*** Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
+					    	    	System.out.println("*** Sending error packet...");
 					    	    	
 					    	    	// Form the error packet
 					            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
@@ -923,7 +923,7 @@ public class Request implements Runnable {
 					        	DatagramPacket sendErrorPacket;
 					        	
 					    		if (fileNotFoundExceptionMidTransfer.getMessage().contains("Access is denied")) {
-						    		System.out.println("*** Access violation: unable to access file " + file);
+						    		System.out.println("\n*** Access violation: unable to access file " + file);
 						    		
 						    		// Form the error packet
 						    		sendErrorPacket = formErrorPacket(requestPacket.getAddress(),
@@ -970,8 +970,8 @@ public class Request implements Runnable {
 						    blockNumber = incrementBlockNumber(blockNumber);
 					    	
 			    	    } catch (IllegalTftpOperationException illegalOperationException) {
-			    	    	System.out.println("IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
-			    	    	System.out.println("Sending error packet...");
+			    	    	System.out.println("*** IllegalTftpOperationException Thrown: " + illegalOperationException.getMessage());
+			    	    	System.out.println("*** Sending error packet...");
 			    	    	
 			    	    	// Form the error packet
 			            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
@@ -991,8 +991,8 @@ public class Request implements Runnable {
 			    	    	
 			    	    	
 			    	    } catch(UnknownTransferIdException unknownTransferIdException) {
-			    	    	System.out.println("UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
-			    	    	System.out.println("Sending error packet...");
+			    	    	System.out.println("*** UnknownTransferIdException Thrown: " + unknownTransferIdException.getMessage());
+			    	    	System.out.println("*** Sending error packet...");
 			    	    	
 			    	    	// Form the error packet
 			            	DatagramPacket sendErrorPacket = formErrorPacket(receivePacket.getAddress(), 
@@ -1100,8 +1100,8 @@ public class Request implements Runnable {
 					//return;
 				}
 	    } catch (IllegalTftpOperationException invalidPacketException) {
-	    	System.out.println("IllegalTftpOperationException Thrown: " + invalidPacketException.getMessage());
-	    	System.out.println("Sending error packet...");
+	    	System.out.println("*** IllegalTftpOperationException Thrown: " + invalidPacketException.getMessage());
+	    	System.out.println("*** Sending error packet...");
 	    	
 	    	// Form the error packet
         	DatagramPacket sendErrorPacket = formErrorPacket(requestPacket.getAddress(), 

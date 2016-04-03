@@ -447,7 +447,7 @@ public class Client {
 		
 	    // Send data to be written to server
     	try {
-    		File file = new File("src/client/files/" + fileName);
+    		File file = new File(this.filePath + fileName);
         	BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
 	        
         	
@@ -669,6 +669,8 @@ public class Client {
                	
                	// Send the error packet
                	sendPacket(sendReceiveSocket, sendErrorPacket);
+               	
+               	in.close();
        		    
    				System.out.println("\n*** Ending session...***");
 	   				
@@ -759,7 +761,7 @@ public class Client {
 						    
     		    		    // Check to see if disk is full
     		    		    if (file.getUsableSpace() < dataLength) {
-    		    		    	System.out.println("\n*** TFTP ERROR 03: Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
+    		    		    	System.out.println("\n*** Disk out of space, only " + Objects.toString(file.getUsableSpace()) + " bytes left.");
      		    		        System.out.println("*** Ending session...");
      		    		        
      		    		        // Now send error packet to server
@@ -915,7 +917,7 @@ public class Client {
     		    		
     		    		if (errorType != null) {
     		    			if (errorType.equals(ErrorType.ILLEGAL_TFTP_OPERATION)) {
-    		    				System.out.println("\n*** Received ILLEGAL_TFTP_OPERATION error packet...Ending session...***");
+    		    				System.out.println("\n*** Received error packet...Ending session...***");
     		    				out.close();
     		    				return;
     		    			}
@@ -960,7 +962,7 @@ public class Client {
 	    		sendErrorPacket = formErrorPacket(receivePacket.getAddress(),
 	    				receivePacket.getPort(),
 	    				ErrorType.ACCESS_VIOLATION,
-	    				"Unable to access file on the client");
+	    				"Unable to write to file on the client");
     		} else {
 	    		System.out.println("*** File not found: " + this.filePath + fileName);
 	    		
