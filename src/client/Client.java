@@ -404,6 +404,7 @@ public class Client {
 	private void sendFile(DatagramPacket packet, String fileName) {
 		int connectionPort = packet.getPort();
 		boolean receivedDuplicateAck = false;
+		boolean sendLastZeroByteDataPacket = false;
 		
 		// Since the client will be sending the DATA packets, we set a timeout on the socket
 		try {
@@ -422,6 +423,10 @@ public class Client {
 	        byte[] dataFromFile = new byte[512];
 	        int n;
 	        byte[] blockNumber = {0, 0};
+	        
+        	if (file.length() % 512 == 0) {
+        		sendLastZeroByteDataPacket = true;
+        	}
 	        
     	    // Validate the first ACK packet received
     	    try {
@@ -473,12 +478,22 @@ public class Client {
     	    
 	        // Read the file in 512 byte chunks
     	    try {
-    	    	while ((n = in.read(dataFromFile)) != -1) {
+    	    	while ((n = in.read(dataFromFile)) != -1 || sendLastZeroByteDataPacket) {
+    	    		
+    	        	DatagramPacket sendDataPacket;
+    	        	
+    	        	if (sendLastZeroByteDataPacket && n == -1) {
+    	        		sendDataPacket = formDataPacket(packet.getAddress(), packet.getPort(), 
+    	        				new byte[]{0}, 1, 
+        	        			blockNumber);
+    		        	
+    		        	sendLastZeroByteDataPacket = false;
+    	        	} else {
+    	        		sendDataPacket = formDataPacket(packet.getAddress(), packet.getPort(), 
+    	    	        			dataFromFile, n, 
+    	    	        			blockNumber);
+    	        	}
         	     	
-    	        	DatagramPacket sendDataPacket = formDataPacket(packet.getAddress(), packet.getPort(), 
-    	        			dataFromFile, n, 
-    	        			blockNumber);
-    	        
     	        	
     	        	removeTrailingZeroBytesFromDataPacket(sendDataPacket);
     	        	
