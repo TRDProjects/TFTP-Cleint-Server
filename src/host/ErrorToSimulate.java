@@ -1,5 +1,7 @@
 package host;
 
+import java.net.DatagramPacket;
+
 import host.ErrorSimulator.PacketType;
 
 public class ErrorToSimulate {
@@ -47,6 +49,9 @@ public class ErrorToSimulate {
 	private String mode;
 	private PacketType packetType;
 	private int delayTime;
+	private DatagramPacket packet;
+	private long lastTime;
+	private boolean hasDelayedPacket;
 	
 	public ErrorToSimulate(int errorNumber) {
 		for (ErrorToSimulateType eType: ErrorToSimulateType.values()) {
@@ -56,7 +61,8 @@ public class ErrorToSimulate {
 		}
 		
 		this.delayTime = 0;
-		
+		this.lastTime = 0;
+		this.hasDelayedPacket = false;
 		this.targetPacketNumber = 0;
 		this.wasExecuted = false;
 	}
@@ -90,6 +96,26 @@ public class ErrorToSimulate {
 	}
 	public int getDelayTime() {
 		return delayTime;
+	}
+	public long getLastTime() {
+		return lastTime;
+	}
+	public boolean hasDelayedPacket() {
+		return hasDelayedPacket;
+	}
+	
+	public void setLastTime(long l) {
+		this.lastTime = l;
+	}
+	public DatagramPacket getPacket() {
+		return packet;
+	}
+	
+	public void setPacket(DatagramPacket packet) {
+		this.packet = packet;
+	}
+	public void setHasDelayedPacket(boolean val) {
+		this.hasDelayedPacket = val;;
 	}
 	
 	public void setTargetPacketNumber(int num) {

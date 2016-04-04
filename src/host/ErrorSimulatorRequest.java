@@ -355,12 +355,11 @@ public class ErrorSimulatorRequest implements Runnable {
  	     	  					" by " + errorToSimulate.getDelayTime() + "ms ****");
  	     			}
  	     			
- 	     			// Delay sending the packet
- 	     			try {
- 	     			    Thread.sleep(errorToSimulate.getDelayTime());
- 	     			} catch(InterruptedException e){
- 	     			    e.printStackTrace();
- 	     			}
+ 	     			errorToSimulate.setPacket(packet);
+ 	     			errorToSimulate.setLastTime(System.currentTimeMillis());
+ 	     			
+ 	     			sendThePacket = false;
+ 	     			
  	     			
  	     			errorToSimulate.setWasExecuted(true);
 
@@ -455,12 +454,10 @@ public class ErrorSimulatorRequest implements Runnable {
  	 	     			
  	 	     			System.out.println("\n >>>> Waiting for " + errorToSimulate.getDelayTime() + " ms <<<<<<\n");
  	 	     			
- 	 	     			// Delay
- 	 	     			try {
- 	 	     			    Thread.sleep(errorToSimulate.getDelayTime());
- 	 	     			} catch(InterruptedException e){
- 	 	     			    e.printStackTrace();
- 	 	     			}
+ 	 	     			errorToSimulate.setPacket(packet);
+ 	 	     			errorToSimulate.setLastTime(System.currentTimeMillis());
+ 	 	     			
+ 	 	     			sendThePacket = false;
  	 	     			
  	 	     			errorToSimulate.setWasExecuted(true);
  	 	     			
@@ -469,6 +466,19 @@ public class ErrorSimulatorRequest implements Runnable {
  	     			
  	     		}
  	     	}
+ 		} else {
+ 			if ((errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DELAY_PACKET || errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_PACKET) && !errorToSimulate.hasDelayedPacket()) {
+ 				if (errorToSimulate.getType() == ErrorToSimulate.ErrorToSimulateType.DUPLICATE_PACKET) {
+ 					System.out.println("\n *** Now sending DUPLICATE " + getPacketType(errorToSimulate.getPacket()).name() + " packet***");
+ 				} else {
+ 					System.out.println("\n *** Now sending DELAYED " + getPacketType(errorToSimulate.getPacket()).name() + " packet***");
+ 				}
+ 				if (System.currentTimeMillis() >= errorToSimulate.getLastTime() + errorToSimulate.getDelayTime()) {
+ 					// Send the delayed packet
+ 					sendPacket(sendReceiveSocket, errorToSimulate.getPacket());
+ 					errorToSimulate.setHasDelayedPacket(true);
+ 				}
+ 			}
  		}
  		
  		
